@@ -3,6 +3,7 @@ import sbt.Keys._
 import complete.DefaultParsers._
 
 object CodegenPlugin extends AutoPlugin {
+  override def requires = sbt.plugins.JvmPlugin
   object autoImport {
     lazy val genTables = TaskKey[Seq[File]]("gen-tables")
     lazy val slickCodeGenTask = (baseDirectory, //sourceManaged in Compile,
@@ -21,31 +22,7 @@ object CodegenPlugin extends AutoPlugin {
       val user = "ctig_portal"
       val password = "coolnurseconspiracyhandbook"
       codegen.NamespacedCodegen.main(
-        Array(
-          slickDriver,
-          jdbcDriver,
-          url,
-          pkg,
-          schemas,
-          fname,
-          typesfname,
-          user,
-          password))
-      /*toError(r.run(
-        "codegen.NamespacedCodegen",
-        cp.files,
-        Array(
-          slickDriver,
-          jdbcDriver,
-          url,
-          pkg,
-          schemas,
-          fname,
-          typesfname,
-          user,
-          password),
-        s.log))*/
-      Seq(file(fname))
+        Array( slickDriver, jdbcDriver, url, pkg, schemas, fname, typesfname, user, password)) Seq(file(fname))
     }
   }
 }
