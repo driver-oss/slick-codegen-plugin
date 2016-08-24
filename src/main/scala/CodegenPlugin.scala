@@ -22,7 +22,8 @@ object CodegenPlugin extends AutoPlugin {
       val user = "ctig_portal"
       val password = "coolnurseconspiracyhandbook"
       codegen.NamespacedCodegen.main(
-        Array( slickDriver, jdbcDriver, url, pkg, schemas, fname, typesfname, user, password)) Seq(file(fname))
+        Array( slickDriver, jdbcDriver, url, pkg, schemas, fname, typesfname, user, password))
+      Seq(file(fname))
     }
   }
 }
