@@ -10,19 +10,17 @@ object CodegenPlugin extends AutoPlugin {
       dependencyClasspath in Compile,
       runner in Compile, streams) map {
       (dir, cp, r, s) =>
-      val url = "jdbc:postgresql://postgres/ctig"
-      val jdbcDriver = "org.postgresql.Driver"
-      val slickDriver = "slick.driver.PostgresDriver"
+      // TODO Move this block into application.conf#slick.db.default.codegen
       val pkg = "dbmodels"
       val outputDir = (dir / "app" / pkg).getPath
       val fname = outputDir + "/Tables.scala"
-      // TODO: typesfname should be a parameter
       val typesfname = (file("shared") / "src" / "main" / "scala" / pkg / "rows" / "TableTypes.scala").getPath
       val schemas = "patients,portal,work_queues,confidential,case_accessioning,samples.samples,samples.subsamples,samples.shipment_preps,samples.collection_methods,experiments.experiments,experiments.exp_types,experiments.somatic_snvs_indels_filtered,samples.basic_diagnosis,samples.molecular_tests,samples.sample_pathology,samples.path_molecular_tests"
-      val user = "ctig_portal"
-      val password = "coolnurseconspiracyhandbook"
-      codegen.NamespacedCodegen.main(
-        Array( slickDriver, jdbcDriver, url, pkg, schemas, fname, typesfname, user, password))
+
+      val uri = new java.net.URI("#slick.db.default")
+
+      codegen.NamespacedCodegen.run(uri, Some(outputDir), fname, typesfname, schemas)
+
       Seq(file(fname))
     }
   }
