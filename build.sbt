@@ -10,9 +10,11 @@ val scalaVersionValue = "2.10.6"
 
 scalaVersion := scalaVersionValue
 
+val slickVersionValue = "3.1.1"
+
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick" % "3.1.1",
-  "com.typesafe.slick" %% "slick-codegen" % "3.1.1",
-//  "org.postgresql" % "postgresql" % "9.3-1102-jdbc41",
+  "com.typesafe.slick" %% "slick" % slickVersionValue,
+  "com.typesafe.slick" %% "slick-codegen" % slickVersionValue,
+  "com.typesafe.slick" %% "slick-hikaricp" % slickVersionValue,
   "org.scala-lang" % "scala-reflect" % scalaVersionValue
 )
