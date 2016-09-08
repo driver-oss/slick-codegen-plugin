@@ -17,7 +17,7 @@ object CodegenPlugin extends AutoPlugin {
       val typesfname = (file("shared") / "src" / "main" / "scala" / pkg / "rows" / "TableTypes.scala").getPath
       val schemas = "patients,portal,work_queues,confidential,case_accessioning,samples.samples,samples.subsamples,samples.shipment_preps,samples.collection_methods,experiments.experiments,experiments.exp_types,experiments.somatic_snvs_indels_filtered,samples.basic_diagnosis,samples.molecular_tests,samples.sample_pathology,samples.path_molecular_tests"
 
-      val uri = new java.net.URI("#slick.db.default")
+      val uri = new java.net.URI("file:src/main/resources/application.conf#slick.db.default")
 
       codegen.NamespacedCodegen.run(uri, Some(outputDir), fname, typesfname, schemas)
 
