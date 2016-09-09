@@ -80,21 +80,13 @@ object NamespacedCodegen {
 
   def run(
     uri: URI,
-    outputDir: Option[String],
+    pkg: String,
     filename: String,
     typesFilename: String,
     schemaList: String
   ): Unit = {
     val dc = DatabaseConfig.forURI[JdbcProfile](uri)
-    val pkg = dc.config.getString("codegen.package")
-    val out = outputDir.getOrElse(dc.config.getStringOr("codegen.outputDir", "."))
     val slickDriver = if(dc.driverIsObject) dc.driverName else "new " + dc.driverName
-
-    // The following three parameters are unique to our code generator
-    // TODO: Decide: Put these in Typsafe Config or make it part of plugin interface?
-    // val filename = dc.config.getString("codegen.filename")
-    // val typesFilename = dc.config.getString("codegen.typesFilename")
-    // val schemaList = dc.config.getString("codegen.schemaList")
 
     val mappedSchemas = parseSchemaList(schemaList)
     val dbModel = Await.result(dc.db.run(createFilteredModel(dc.driver, mappedSchemas)), Duration.Inf)
