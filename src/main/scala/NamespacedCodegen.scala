@@ -22,11 +22,8 @@ import java.io.FileWriter
 // generator places the relevant generated classes into separate
 // objects--a "a" object, and a "b" object)
 object NamespacedCodegen {
-  def parseSchemaList(schemaList: String): Map[String, List[String]] = {
-    val sl = schemaList.split(",").filter(_.trim.nonEmpty)
-    val tables: List[String] = sl.filter(_.contains(".")).toList
-    val schemas: List[String] = sl.filter(s => !(s.contains("."))).toList
-
+  def parseSchemaList(schemaTableNames: List[String]): Map[String, List[String]] = {
+    val (tables, schemas) = schemaTableNames.partition(_.contains("."))
     val mappedSchemas = schemas.map(_ -> List()).toMap
     val mappedTables = tables.groupBy(_.split("\\.")(0)).map {
       case (key, value) => (key, value.map(_.split("\\.")(1)).asInstanceOf[List[String]])
@@ -83,12 +80,11 @@ object NamespacedCodegen {
     pkg: String,
     filename: String,
     typesFilename: String,
-    schemaList: String
+    schemaTableNames: List[String]
   ): Unit = {
     val dc = DatabaseConfig.forURI[JdbcProfile](uri)
     val slickDriver = if(dc.driverIsObject) dc.driverName else "new " + dc.driverName
-
-    val mappedSchemas = parseSchemaList(schemaList)
+    val mappedSchemas = parseSchemaList(schemaTableNames)
     val dbModel = Await.result(dc.db.run(createFilteredModel(dc.driver, mappedSchemas)), Duration.Inf)
     //finally dc.db.close
 
