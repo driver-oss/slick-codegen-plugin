@@ -6,13 +6,10 @@ object CodegenPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
   object autoImport {
     lazy val genTables = TaskKey[Seq[File]]("gen-tables")
-    lazy val slickCodeGenTask = (baseDirectory, //sourceManaged in Compile,
-      dependencyClasspath in Compile,
-      runner in Compile, streams) map {
-      (dir, cp, r, s) =>
-      // TODO Move this block into application.conf#slick.db.default.codegen
+
+    lazy val slickCodeGenTask = Def.task {
       val pkg = "dbmodels"
-      val outputDir = (dir / "app" / pkg).getPath
+      val outputDir = (baseDirectory.value / "app" / pkg).getPath
       val fname = outputDir + "/Tables.scala"
       val typesfname = (file("shared") / "src" / "main" / "scala" / pkg / "rows" / "TableTypes.scala").getPath
       val schemas = "patients,portal,work_queues,confidential,case_accessioning,samples.samples,samples.subsamples,samples.shipment_preps,samples.collection_methods,experiments.experiments,experiments.exp_types,experiments.somatic_snvs_indels_filtered,samples.basic_diagnosis,samples.molecular_tests,samples.sample_pathology,samples.path_molecular_tests"
