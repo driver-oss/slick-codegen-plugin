@@ -41,22 +41,6 @@ object NamespacedCodegen {
         .get(t.name.schema.getOrElse(""))
         .fold(false)(ts => ts.isEmpty || ts.contains(t.name.name))))))
 
-  val manualForeignKeys: Map[(String, String), (String, String)] =
-    Map(
-      ("portal.case_tumor_info", "patient_id") -> (("patients.patients", "patient_id")),
-      ("portal.case_tumor_info", "case_id") -> (("work_queues.reports", "case_id")),
-      ("portal.case_tumor_info", "cancer_id") -> (("patients.cancer", "cancer_id")),
-      ("confidential.join_pat", "patient_id") -> (("patients.patients", "patient_id")),
-      ("portal.case_tumor_info", "ordering_physician") -> (("patients.oncologists", "oncologist_id")),
-      ("patients.oncologists_case_permissions_view", "oncologist_id") -> (("patients.oncologists", "oncologist_id")),
-      ("patients.oncologists_case_permissions_view", "case_id") -> (("work_queues.reports", "case_id")),
-      ("case_accessioning.case_accessioning", "case_id") -> (("work_queues.reports", "case_id")),
-      ("case_accessioning.case_accessioning", "cancer_id") -> (("patients.cancer", "cancer_id")),
-      ("experiments.somatic_snvs_indels_filtered", "cancer_id") -> (("patients.cancer", "cancer_id")),
-      ("experiments.experiments", "case_id") -> (("work_queues.reports", "case_id")),
-      ("samples.samples", "case_id") -> (("work_queues.reports", "case_id")) // TODO: Several of these can be added in a PR on postgres.
-    )
-
   def references(dbModel: Model, tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (Table, Column)] = {
     def getTableColumn(tc: (String, String)) : (Table, Column) = {
       val (tableName, columnName) = tc
@@ -80,7 +64,8 @@ object NamespacedCodegen {
     pkg: String,
     filename: String,
     typesFilename: String,
-    schemaTableNames: List[String]
+    schemaTableNames: List[String],
+    manualForeignKeys: Map[(String, String), (String, String)]
   ): Unit = {
     val dc = DatabaseConfig.forURI[JdbcProfile](uri)
     val slickDriver = if(dc.driverIsObject) dc.driverName else "new " + dc.driverName
