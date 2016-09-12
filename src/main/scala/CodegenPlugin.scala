@@ -7,24 +7,26 @@ object CodegenPlugin extends AutoPlugin {
   type TableColumn = (String, String)
 
   object autoImport {
-    lazy val genTables = TaskKey[Seq[File]]("gen-tables")
-    lazy val uri = SettingKey[String]("uri for the database configuration")
-    lazy val pkg = SettingKey[String]("package in which to place generated code")
-    lazy val tablesFilename = SettingKey[String]("path for slick table models")
-    lazy val rowsFilename = SettingKey[String]("path for row case classes")
-    lazy val schemas = SettingKey[List[String]]("schemas and tables to process")
-    lazy val manualForeignKeys = SettingKey[Map[TableColumn, TableColumn]]("foreign key references to data models add manually")
+    lazy val codegen = TaskKey[Seq[File]]("generate slick database schema")
+
+    lazy val codegenURI = SettingKey[String]("uri for the database configuration")
+    lazy val codegenPackage = SettingKey[String]("package in which to place generated code")
+    lazy val codegenTablesFile = SettingKey[String]("path for slick table models")
+    lazy val codegenRowsFile = SettingKey[String]("path for row case classes")
+    lazy val codegenSchemaWhitelist = SettingKey[List[String]]("schemas and tables to process")
+    lazy val codegenForeignKeys = SettingKey[Map[TableColumn, TableColumn]]("foreign key references to data models add manually")
 
     lazy val slickCodeGenTask = Def.task {
-      codegen.NamespacedCodegen.run(
-        new java.net.URI(uri.value),
-        pkg.value,
-        tablesFilename.value,
-        rowsFilename.value,
-        schemas.value,
-        manualForeignKeys.value)
+      NamespacedCodegen.run(
+        new java.net.URI(codegenURI.value),
+        codegenPackage.value,
+        codegenTablesFile.value,
+        codegenRowsFile.value,
+        codegenSchemaWhitelist.value,
+        codegenForeignKeys.value
+      )
 
-      Seq(file(tablesFilename.value), file(rowsFilename.value))
+      Seq(file(codegenTablesFile.value), file(codegenRowsFile.value))
     }
   }
 }

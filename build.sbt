@@ -2,9 +2,9 @@ sbtPlugin := true
 
 organization := "com.drivergrp"
 
-name := "slick-codegen-plugin"
+name := "sbt-slick-codegen"
 
-version := "0.1"
+version := "0.1-SNAPSHOT"
 
 val scalaVersionValue = "2.10.6"
 

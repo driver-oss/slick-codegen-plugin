@@ -1,5 +1,3 @@
-package codegen
-
 import slick.dbio.{NoStream, DBIOAction}
 
 import scala.concurrent.Await
