@@ -7,7 +7,7 @@ object CodegenPlugin extends AutoPlugin {
   type TableColumn = (String, String)
 
   object autoImport {
-    lazy val codegen = TaskKey[Seq[File]]("generate slick database schema")
+    lazy val codegen = TaskKey[Seq[File]]("gen-tables", "generate slick database schema")
 
     lazy val codegenURI = SettingKey[String]("uri for the database configuration")
     lazy val codegenPackage = SettingKey[String]("package in which to place generated code")
