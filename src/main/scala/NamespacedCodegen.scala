@@ -1,18 +1,20 @@
-import slick.dbio.{NoStream, DBIOAction}
+import java.io.{FileWriter, File}
+import java.net.URI
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.reflect.runtime.currentMirror
+
 import slick.ast.ColumnOption
+import slick.backend.DatabaseConfig
+import slick.codegen.{AbstractGenerator, SourceCodeGenerator}
+import slick.dbio.{DBIO, DBIOAction, NoStream}
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
-import slick.codegen.{AbstractGenerator, SourceCodeGenerator}
-import slick.model._
 import slick.{model => m}
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import java.io.File
-import java.io.FileWriter
+import slick.model.{Column, Model, Table}
+import slick.util.ConfigExtensionMethods.configExtensionMethods
 
 // NamespacedCodegen handles tables within schemas by namespacing them
 // within objects here
@@ -29,9 +31,6 @@ object NamespacedCodegen {
 
     mappedSchemas ++ mappedTables
   }
-
-  import slick.dbio.DBIO
-  import slick.model.Model
 
   def createFilteredModel(driver: JdbcProfile, mappedSchemas: Map[String, List[String]]): DBIO[Model] =
     driver.createModel(Some(
@@ -51,11 +50,6 @@ object NamespacedCodegen {
 
     tcMappings.map{case (from, to) => ({getTableColumn(from); from}, getTableColumn(to))}
   }
-
-
-  import java.net.URI
-  import slick.backend.DatabaseConfig
-  import slick.util.ConfigExtensionMethods.configExtensionMethods
 
   def run(
     uri: URI,
