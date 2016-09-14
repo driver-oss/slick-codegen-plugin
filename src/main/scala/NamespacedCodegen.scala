@@ -9,6 +9,12 @@ import slick.jdbc.meta.MTable
 import slick.codegen.{AbstractGenerator, SourceCodeGenerator}
 import slick.model._
 import slick.{model => m}
+import slick.dbio.DBIO
+import slick.model.Model
+import java.net.URI
+import slick.backend.DatabaseConfig
+import slick.util.ConfigExtensionMethods.configExtensionMethods
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import java.io.File
@@ -30,8 +36,6 @@ object NamespacedCodegen {
     mappedSchemas ++ mappedTables
   }
 
-  import slick.dbio.DBIO
-  import slick.model.Model
 
   def createFilteredModel(driver: JdbcProfile, mappedSchemas: Map[String, List[String]]): DBIO[Model] =
     driver.createModel(Some(
@@ -53,9 +57,6 @@ object NamespacedCodegen {
   }
 
 
-  import java.net.URI
-  import slick.backend.DatabaseConfig
-  import slick.util.ConfigExtensionMethods.configExtensionMethods
 
   def run(
     uri: URI,
@@ -101,10 +102,12 @@ object NamespacedCodegen {
           //if (typeFile) "import acyclic.file\nimport dbmodels.rows\n"
           //else
           "import slick.model.ForeignKeyAction\n" +
-        "import rows._\n" +
+        "import dbmodels.rows\n" +
         ( if(tables.exists(_.hlistEnabled)){
-          "import slick.collection.heterogeneous._\n"+
-          "import slick.collection.heterogeneous.syntax._\n"
+          "import slick.collection.heterogeneous._\n" +
+          "import slick.collection.heterogeneous.syntax._\n" +
+          "import com.drivergrp.core._\n" +
+          "import com.drivergrp.core.database._\n"
         } else ""
         ) +
         ( if(tables.exists(_.PlainSqlMapper.enabled)){
@@ -125,23 +128,23 @@ object NamespacedCodegen {
         }
 
         val schemata = mappedSchemas.keys.toList.sorted.map(
-          s => indent("object" + " " + s + " {\n" + schemaFor(s)) + "\n}\n"
+          s => indent("object" + " " + s + " extends CoreDBMappers {\n" + schemaFor(s)) + "\n}\n"
         ).mkString("\n\n")
 
-        val idType =
-          if (typeFile)// Should not be defined here.
-            """|case class Id[T](v: Int)
-               |""".stripMargin
-          else
-            // This should be in a separate Implicits trait
-            """|implicit def idTypeMapper[A] : BaseColumnType[Id[A]] =
-               |  MappedColumnType.base[Id[A], Int](_.v, Id(_))
-               |import play.api.mvc.PathBindable
-               |implicit def idPathBindable[A] : PathBindable[Id[A]] = implicitly[PathBindable[Int]].transform[Id[A]](Id(_),_.v)
-               |""".stripMargin
+        val mapperTrait: String = """trait CoreDBMappers extends com.drivergrp.core.database.IdColumnTypes { override val database = com.drivergrp.core.database.Database.fromConfig("slick.db.default") }"""
+
+        // val idType =
+        //   if (typeFile)// Should not be defined here.
+        //     """|case class Id[T](v: Int)
+        //        |""".stripMargin
+        //   else
+        //     // This should be in a separate Implicits trait
+        //     """|implicit def idTypeMapper[A] : BaseColumnType[Id[A]] =
+        //        |  MappedColumnType.base[Id[A], Int](_.v, Id(_))
+        //        |""".stripMargin
         //pathbindable is play specific
         // Id works only with labdash Id
-        imports + idType + schemata
+        imports + mapperTrait + "\n\n" + schemata
       }
 
       // This is overridden to output classfiles elsewhere
@@ -239,9 +242,8 @@ object NamespacedCodegen {
             else model.tpe match {
               // how does this type work out?
               // There should be a way to add adhoc custom time mappings
-              case "java.sql.Date" => "tools.Date"
-              case "java.sql.Time" => "tools.Time"
-              case "java.sql.Timestamp" => "tools.Time"
+              case "java.sql.Time" => "com.drivergrp.core.time.Time"
+              case "java.sql.Timestamp" => "com.drivergrp.core.time.Time"
               case _ => super.rawType
             }
           }
@@ -255,7 +257,7 @@ object NamespacedCodegen {
       fw.write(c)
       fw.close()
     }
-    val disableScalariform = "filename/ format: OFF\n"
+    val disableScalariform = "// filename/ format: OFF\n"
     val tablesSource = codegen(false).packageCode(slickDriver, pkg, "Tables", None)
     val rowsSource = s"package $pkg.rows\n\n" + codegen(true).code
 
