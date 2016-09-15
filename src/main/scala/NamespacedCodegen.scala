@@ -1,24 +1,20 @@
-import slick.dbio.{NoStream, DBIOAction}
+import java.io.{FileWriter, File}
+import java.net.URI
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.reflect.runtime.currentMirror
+
 import slick.ast.ColumnOption
+import slick.backend.DatabaseConfig
+import slick.codegen.{AbstractGenerator, SourceCodeGenerator}
+import slick.dbio.{DBIO, DBIOAction, NoStream}
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
-import slick.codegen.{AbstractGenerator, SourceCodeGenerator}
-import slick.model._
 import slick.{model => m}
-import slick.dbio.DBIO
-import slick.model.Model
-import java.net.URI
-import slick.backend.DatabaseConfig
+import slick.model.{Column, Model, Table}
 import slick.util.ConfigExtensionMethods.configExtensionMethods
-
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import java.io.File
-import java.io.FileWriter
 
 // NamespacedCodegen handles tables within schemas by namespacing them
 // within objects here
@@ -26,22 +22,17 @@ import java.io.FileWriter
 // generator places the relevant generated classes into separate
 // objects--a "a" object, and a "b" object)
 object NamespacedCodegen {
-  def parseSchemaList(schemaTableNames: List[String]): Map[String, List[String]] = {
-    val (tables, schemas) = schemaTableNames.partition(_.contains("."))
-    val mappedSchemas = schemas.map(_ -> List()).toMap
-    val mappedTables = tables.groupBy(_.split("\\.")(0)).map {
-      case (key, value) => (key, value.map(_.split("\\.")(1)).asInstanceOf[List[String]])
-    }
-
-    mappedSchemas ++ mappedTables
-  }
-
+  def parseSchemaList(schemaTableNames: List[String]): Map[String, List[String]] =
+    schemaTableNames.map(_.split('.'))
+      .groupBy(_.head)
+      .mapValues(_.flatMap(_.tail))
+      .toMap
 
   def createFilteredModel(driver: JdbcProfile, mappedSchemas: Map[String, List[String]]): DBIO[Model] =
     driver.createModel(Some(
-      MTable.getTables.map(_.filter((t: MTable) => mappedSchemas
-        .get(t.name.schema.getOrElse(""))
-        .fold(false)(ts => ts.isEmpty || ts.contains(t.name.name))))))
+      MTable.getTables.map(_.filter((t: MTable) =>
+        t.name.schema.flatMap(mappedSchemas.get).exists(tables =>
+          tables.isEmpty || tables.contains(t.name.name))))))
 
   def references(dbModel: Model, tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (Table, Column)] = {
     def getTableColumn(tc: (String, String)) : (Table, Column) = {
@@ -55,8 +46,6 @@ object NamespacedCodegen {
 
     tcMappings.map{case (from, to) => ({getTableColumn(from); from}, getTableColumn(to))}
   }
-
-
 
   def run(
     uri: URI,
@@ -75,18 +64,21 @@ object NamespacedCodegen {
     val manualReferences = references(dbModel, manualForeignKeys)
 
     def codegen(typeFile: Boolean) = new SourceCodeGenerator(dbModel){
-      def derefColumn(table: m.Table, column: m.Column): (m.Table, m.Column) =
-        (table.foreignKeys.toList
-          .filter(_.referencingColumns.forall(_ == column))
-          .flatMap(fk =>
-          fk.referencedColumns match {
-            case Seq(c) => dbModel.tablesByName.get(fk.referencedTable).map{(_, c)}
-            case _ => None
-          }) ++
-          manualReferences.get((table.name.asString, column.name)))
-          .headOption
+
+      def derefColumn(table: m.Table, column: m.Column): (m.Table, m.Column) = {
+        val referencedColumn: Seq[(m.Table, m.Column)] = table.foreignKeys
+          .filter(tableFk => tableFk.referencingColumns.forall(_ == column))
+          .filter(columnFk => columnFk.referencedColumns.length == 1)
+          .flatMap(_.referencedColumns
+            .map(c => (dbModel.tablesByName(c.table), c)))
+
+        assert(referencedColumn.distinct.length <= 1, referencedColumn)
+
+        referencedColumn.headOption
+          .orElse(manualReferences.get((table.name.asString, column.name)))
           .map((derefColumn _).tupled)
           .getOrElse((table, column))
+      }
 
       // Is this compatible with ***REMOVED*** Id? How do we make it generic?
       def idType(t: m.Table) : String =
@@ -98,9 +90,6 @@ object NamespacedCodegen {
         // Why can't we simply re-use?
 
         var imports =
-          // acyclic is unnecessary in generic projects
-          //if (typeFile) "import acyclic.file\nimport dbmodels.rows\n"
-          //else
           "import slick.model.ForeignKeyAction\n" +
         "import dbmodels.rows\n" +
         ( if(tables.exists(_.hlistEnabled)){
@@ -116,34 +105,21 @@ object NamespacedCodegen {
         } else ""
         ) + "\n\n" // We didn't copy ddl though
 
+        val sortedSchemaTables: List[(String, Seq[TableDef])] = tables
+          .groupBy(t => t.model.name.schema.getOrElse("`public`"))
+          .toList.sortBy(_._1)
 
-        val bySchema = tables.groupBy(t => {
-          t.model.name.schema
-        })
-
-        val schemaFor = (schema: String) => {
-          bySchema(Option(schema)).sortBy(_.model.name.table).map(
-            _.code.mkString("\n") // TODO explore here
-          ).mkString("\n\n")
-        }
-
-        val schemata = mappedSchemas.keys.toList.sorted.map(
-          s => indent("object" + " " + s + " extends CoreDBMappers {\n" + schemaFor(s)) + "\n}\n"
-        ).mkString("\n\n")
+        val schemata: String = sortedSchemaTables.map {
+          case (schemaName, tables) =>
+            val tableCode = tables
+              .sortBy(_.model.name.table)
+              .map(_.code.mkString("\n"))
+              .mkString("\n\n")
+            indent(s"object $schemaName extends CoreDBMappers {\n$tableCode")+"\n}\n"
+        }.mkString("\n\n")
 
         val mapperTrait: String = """trait CoreDBMappers extends com.drivergrp.core.database.IdColumnTypes { override val database = com.drivergrp.core.database.Database.fromConfig("slick.db.default") }"""
 
-        // val idType =
-        //   if (typeFile)// Should not be defined here.
-        //     """|case class Id[T](v: Int)
-        //        |""".stripMargin
-        //   else
-        //     // This should be in a separate Implicits trait
-        //     """|implicit def idTypeMapper[A] : BaseColumnType[Id[A]] =
-        //        |  MappedColumnType.base[Id[A], Int](_.v, Id(_))
-        //        |""".stripMargin
-        //pathbindable is play specific
-        // Id works only with labdash Id
         imports + mapperTrait + "\n\n" + schemata
       }
 
