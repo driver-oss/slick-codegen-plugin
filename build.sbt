@@ -6,6 +6,14 @@ name := "sbt-slick-codegen"
 
 version := "0.1-SNAPSHOT"
 
+publishTo := {
+  val jfrog = "https://drivergrp.jfrog.io/drivergrp/"
+  if (isSnapshot.value) Some("snapshots" at jfrog + "snapshots")
+  else Some("releases" at jfrog + "releases")
+}
+
+credentials += Credentials("Artifactory Realm", "drivergrp.jfrog.io", "sbt-publisher", "***REMOVED***")
+
 val scalaVersionValue = "2.10.6"
 
 scalaVersion := scalaVersionValue
