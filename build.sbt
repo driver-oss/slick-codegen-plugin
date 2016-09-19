@@ -4,8 +4,6 @@ organization := "com.drivergrp"
 
 name := "sbt-slick-codegen"
 
-version := "0.1-SNAPSHOT"
-
 publishTo := {
   val jfrog = "https://drivergrp.jfrog.io/drivergrp/"
   if (isSnapshot.value) Some("snapshots" at jfrog + "snapshots")
