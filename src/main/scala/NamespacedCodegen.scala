@@ -82,7 +82,7 @@ object NamespacedCodegen {
 
       // Is this compatible with ***REMOVED*** Id? How do we make it generic?
       def idType(t: m.Table) : String =
-        "Id[rows."+ t.name.schema.fold("")(_ + ".") + t.name.table.toCamelCase+"Row]"
+        "Id["+ t.name.schema.fold("public")(_ + ".") + t.name.table.toCamelCase+"Row]"
 
       override def code = {
         //imports is copied right out of
@@ -91,7 +91,6 @@ object NamespacedCodegen {
 
         var imports =
           "import slick.model.ForeignKeyAction\n" +
-        "import dbmodels.rows\n" +
         ( if(tables.exists(_.hlistEnabled)){
           "import slick.collection.heterogeneous._\n" +
           "import slick.collection.heterogeneous.syntax._\n" +
@@ -233,12 +232,12 @@ object NamespacedCodegen {
       fw.write(c)
       fw.close()
     }
-    val disableScalariform = "// filename/ format: OFF\n"
+    val disableScalaStyle = "// scalastyle:off\n"
     val tablesSource = codegen(false).packageCode(slickDriver, pkg, "Tables", None)
     val rowsSource = s"package $pkg.rows\n\n" + codegen(true).code
 
-    write(disableScalariform + tablesSource, filename)
-    write(disableScalariform + rowsSource, typesFilename)
+    write(disableScalaStyle + tablesSource, filename)
+    write(disableScalaStyle + rowsSource, typesFilename)
   }
 }
 
