@@ -1,6 +1,6 @@
 sbtPlugin := true
 
-organization := "com.drivergrp"
+organization := "xyz.driver"
 
 name := "sbt-slick-codegen"
 
