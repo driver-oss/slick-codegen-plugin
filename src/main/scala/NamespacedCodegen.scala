@@ -78,10 +78,10 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
         """.stripMargin
 
         writeStringToFile(
-          outputPath,
           allImports + generatedSchema,
+          outputPath,
           pkg,
-          schemaName
+          s"${schemaName}.scala"
         )
 
         generatedSchema
