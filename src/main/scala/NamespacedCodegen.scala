@@ -6,7 +6,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import slick.backend.DatabaseConfig
-import slick.codegen.SourceCodeGenerator
+import slick.codegen.{SourceCodeGenerator, StringGeneratorHelpers}
 import slick.dbio.DBIO
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
@@ -207,13 +207,12 @@ object SchemaParser {
 
 }
 
-
-object TypeGenerator {
+object TypeGenerator extends StringGeneratorHelpers {
   // generate the id types
   def idType(pkg: String, t: sModel.Table): String = {
     val header = s"Id["
     val schemaName = t.name.schema.fold("")(_ + ".")
-    val tableName = StringHelpers.toCamelCase(t.name.table)
+    val tableName = (t.name.table).toCamelCase
     val footer = "]"
     s"${header}${pkg}.${schemaName}${tableName}Row${footer}"
   }
@@ -233,15 +232,5 @@ object FileHelpers {
     bw.write(content)
     bw.close()
   }
-
-}
-
-object StringHelpers {
-  // copied from GeneratorHelpers.StringExtensions
-  final def toCamelCase(value: String) = value.toLowerCase
-    .split("_")
-    .map{ case "" => "_" case s => s } // avoid possible collisions caused by multiple '_'
-    .map(_.capitalize)
-    .mkString("")
 
 }
