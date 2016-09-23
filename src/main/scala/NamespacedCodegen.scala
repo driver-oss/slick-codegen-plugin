@@ -21,8 +21,6 @@ object Generator {
     val parsedSchemas: Map[String, List[String]] = SchemaParser.parse(schemaNames)
     val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemas)), Duration.Inf)
 
-    FileHelpers.createOutputPath(outputPath)
-
     val generator = new Generator(uri, pkg, dbModel, outputPath, manualForeignKeys)
     val generatedCode = generator.code
     parsedSchemas.keys.map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
@@ -79,9 +77,11 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
                                  |}
         """.stripMargin
 
-        FileHelpers.write(
-          FileHelpers.schemaOutputPath(outputPath, schemaName),
-          allImports + generatedSchema
+        writeStringToFile(
+          outputPath,
+          allImports + generatedSchema,
+          pkg,
+          schemaName
         )
 
         generatedSchema
@@ -220,17 +220,6 @@ object TypeGenerator extends StringGeneratorHelpers {
 
 
 object FileHelpers {
-
   def schemaOutputPath(path: String, schemaName: String): String =
     Paths.get(path, s"${schemaName}.scala").toAbsolutePath().toString()
-
-  def createOutputPath(path: String): Boolean = (new File(path)).mkdirs()
-
-  def write(filename: String, content: String) = {
-    val file = new File(filename)
-    val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(content)
-    bw.close()
-  }
-
 }
