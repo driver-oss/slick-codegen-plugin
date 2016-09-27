@@ -6,12 +6,12 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import slick.backend.DatabaseConfig
-import slick.codegen.{SourceCodeGenerator, StringGeneratorHelpers}
+import slick.codegen.{OutputHelpers, SourceCodeGenerator, StringGeneratorHelpers}
 import slick.dbio.DBIO
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
 import slick.{model => sModel}
-import slick.model.{Model, Column, Table}
+import slick.model.{Column, Model, Table}
 
 object Generator {
 
@@ -28,53 +28,58 @@ object Generator {
 
 }
 
-class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) extends SourceCodeGenerator(dbModel) {
+class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
+  val baseImports: String =
+    s"""
+       |
+     |import com.drivergrp.core._
+       |import com.drivergrp.core.database._
+       |
+    |""".stripMargin
+
+  val hlistImports: String =
+    if (tables.exists(_.hlistEnabled))
+      """
+        |import slick.collection.heterogeneous._
+        |import slick.collection.heterogeneous.syntax._
+        |
+        |""".stripMargin
+    else ""
+
+  val plainSqlMapperImports: String =
+    if (tables.exists(_.PlainSqlMapper.enabled))
+      """
+        |import slick.jdbc.{GetResult => GR}
+        |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
+        |
+        |""".stripMargin
+    else ""
+
+  override def code: String = baseImports + hlistImports + plainSqlMapperImports
+}
+
+class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) extends SourceCodeGenerator(dbModel) with OutputHelpers {
+
+  val allImports: String = new ImportGenerator(dbModel).code
 
   override def code: String = {
-    val baseImport: String =
-      s"""
-         |package ${pkg}
-         |
-      |import com.drivergrp.core._
-         |import com.drivergrp.core.database._
-         |
-      |""".stripMargin
-
-    val hlistImports: String =
-      if (tables.exists(_.hlistEnabled))
-        """
-          |import slick.collection.heterogeneous._
-          |import slick.collection.heterogeneous.syntax._
-          |
-          |""".stripMargin
-      else ""
-
-    val plainSqlMapperImports: String =
-      if (tables.exists(_.PlainSqlMapper.enabled))
-        """
-          |import slick.jdbc.{GetResult => GR}
-          |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
-          |
-          |""".stripMargin
-      else ""
-
-    val allImports: String = baseImport + hlistImports + plainSqlMapperImports
 
     val sortedSchemaTables: List[(String, Seq[TableDef])] = tables
       .groupBy(t => t.model.name.schema.getOrElse("`public`"))
       .toList.sortBy(_._1)
 
+
     val schemata: String = sortedSchemaTables.map {
       case (schemaName, tableDefs) =>
         val tableCode = tableDefs.sortBy(_.model.name.table).map(_.code.mkString("\n")) .mkString("\n\n")
         val generatedSchema = s"""
-                                 |object ${schemaName} extends IdColumnTypes {
-                                 |  override val database = com.drivergrp.core.database.Database.fromConfig("${uri.getFragment()}")
-                                 |  import database.profile.api._
-                                 |  // TODO: the name for this implicit should be changed in driver core
-                                 |  implicit val tColType = MappedColumnType.base[com.drivergrp.core.time.Time, Long](time => time.millis, com.drivergrp.core.time.Time(_))
-                                 |  ${tableCode}
-                                 |}
+          |object ${schemaName} extends IdColumnTypes {
+          |  override val database = com.drivergrp.core.database.Database.fromConfig("${uri.getFragment()}")
+          |  import database.profile.api._
+          |  // TODO: the name for this implicit should be changed in driver core
+          |  implicit val tColType = MappedColumnType.base[com.drivergrp.core.time.Time, Long](time => time.millis, com.drivergrp.core.time.Time(_))
+          |  ${tableCode}
+          |}
         """.stripMargin
 
         writeStringToFile(
