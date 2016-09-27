@@ -28,11 +28,21 @@ object Generator {
 
 }
 
+class PackageNameGenerator(pkg: String, dbModel: Model) extends SourceCodeGenerator(dbModel) {
+  override def code: String =
+    s"""
+       |// format: OFF
+       |// scalastyle:off
+       |package ${pkg}
+       |
+       |""".stripMargin
+}
+
+
 class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
   val baseImports: String =
     s"""
-       |
-     |import com.drivergrp.core._
+       |import com.drivergrp.core._
        |import com.drivergrp.core.database._
        |
     |""".stripMargin
@@ -60,6 +70,7 @@ class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
 
 class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) extends SourceCodeGenerator(dbModel) with OutputHelpers {
 
+  val packageName = new PackageNameGenerator(pkg, dbModel).code
   val allImports: String = new ImportGenerator(dbModel).code
 
   override def code: String = {
@@ -79,11 +90,12 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
           |  // TODO: the name for this implicit should be changed in driver core
           |  implicit val tColType = MappedColumnType.base[com.drivergrp.core.time.Time, Long](time => time.millis, com.drivergrp.core.time.Time(_))
           |  ${tableCode}
+          |
           |}
-        """.stripMargin
+          |// scalastyle:on""".stripMargin
 
         writeStringToFile(
-          allImports + generatedSchema,
+          packageName + allImports + generatedSchema,
           outputPath,
           pkg,
           s"${schemaName}.scala"
@@ -99,7 +111,7 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
   override def Table = new Table(_) { table =>
 
     // need this in order to use our own TableClass generator
-    override def definitions = Seq[Def]( EntityType, PlainSqlMapper, TableClassRef, TableValue )
+    override def definitions = Seq[Def]( EntityTypeRef, PlainSqlMapper, TableClassRef, TableValue )
 
     def TableClassRef = new TableClass() {
       // We disable the option mapping, as it is a bit more complex to support and we don't appear to need it
@@ -127,6 +139,10 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
     if(!hlistEnabled) super.extractor
     else s"(a : ${TableClass.elementType}) => Some(" + columns.map("a."+_.name ).mkString("::") + ":: HNil)"
 
+
+    def EntityTypeRef = new EntityTypeDef {
+      override def code: String = (if (classEnabled) "final " else "") + super.code
+    }
 
     override def Column = new Column(_) {
       column =>
