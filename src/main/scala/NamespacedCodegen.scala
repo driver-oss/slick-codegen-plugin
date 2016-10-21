@@ -42,8 +42,8 @@ class PackageNameGenerator(pkg: String, dbModel: Model) extends SourceCodeGenera
 class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
   val baseImports: String =
     s"""
-       |import com.drivergrp.core._
-       |import com.drivergrp.core.database._
+       |import xyz.driver.core._
+       |import xyz.driver.core.database._
        |
     |""".stripMargin
 
@@ -85,10 +85,10 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
         val tableCode = tableDefs.sortBy(_.model.name.table).map(_.code.mkString("\n")) .mkString("\n\n")
         val generatedSchema = s"""
           |object ${schemaName} extends IdColumnTypes {
-          |  override val database = com.drivergrp.core.database.Database.fromConfig("${uri.getFragment()}")
+          |  override val database = xyz.driver.core.database.Database.fromConfig("${uri.getFragment()}")
           |  import database.profile.api._
           |  // TODO: the name for this implicit should be changed in driver core
-          |  implicit val tColType = MappedColumnType.base[com.drivergrp.core.time.Time, Long](time => time.millis, com.drivergrp.core.time.Time(_))
+          |  implicit val tColType = MappedColumnType.base[xyz.driver.core.time.Time, Long](time => time.millis, xyz.driver.core.time.Time(_))
           |  ${tableCode}
           |
           |}
@@ -170,8 +170,8 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
         if (c.options.contains(slick.ast.ColumnOption.PrimaryKey)) TypeGenerator.idType(pkg, t)
         else model.tpe match {
           // TODO: There should be a way to add adhoc custom time mappings
-          case "java.sql.Time" => "com.drivergrp.core.time.Time"
-          case "java.sql.Timestamp" => "com.drivergrp.core.time.Time"
+          case "java.sql.Time" => "xyz.driver.core.time.Time"
+          case "java.sql.Timestamp" => "xyz.driver.core.time.Time"
           case _ => super.rawType
         }
       }
