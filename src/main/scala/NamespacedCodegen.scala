@@ -18,7 +18,7 @@ object Generator {
 
   def run(uri: URI, pkg: String, schemaNames: Option[List[String]], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) = {
     val dc: DatabaseConfig[JdbcProfile] = DatabaseConfig.forURI[JdbcProfile](uri)
-    val parsedSchemasOpt: Option[Map[String, List[String]]] = SchemaParser.parse(schemaNames)
+    val parsedSchemasOpt: Option[Map[String, List[String]]] = schemaNames.map(SchemaParser.parse)
     val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)), Duration.Inf)
 
     val generator = new Generator(uri, pkg, dbModel, outputPath, manualForeignKeys)
@@ -209,27 +209,21 @@ object SchemaParser {
     tcMappings.map{case (from, to) => ({getTableColumn(from); from}, getTableColumn(to))}
   }
 
-  def parse(schemaTableNamesOpt: Option[List[String]]): Option[Map[String, List[String]]] =
-    schemaTableNamesOpt.map( tNames =>
-      tNames.map(_.split('.'))
+  def parse(schemaTableNames: List[String]): Map[String, List[String]] =
+    schemaTableNames.map(_.split('.'))
       .groupBy(_.head)
       .mapValues(_.flatMap(_.tail))
-    )
 
   def createModel(jdbcProfile: JdbcProfile, mappedSchemasOpt: Option[Map[String, List[String]]]): DBIO[Model] = {
     val allTables: DBIO[Vector[MTable]] = MTable.getTables
 
-    if (mappedSchemasOpt.isEmpty) jdbcProfile.createModel(Some(allTables))
-    else {
-      val mappedSchemas = mappedSchemasOpt.get
-      val filteredTables: DBIO[Vector[MTable]] = allTables.map(
+    val filteredTables = mappedSchemasOpt.map(mappedSchemas =>
+      allTables.map(
         (tables: Vector[MTable]) => tables.filter(table =>
           table.name.schema.flatMap(mappedSchemas.get).exists(ts =>
-            ts.isEmpty || ts.contains(table.name.name))
-        )
-      )
-      jdbcProfile.createModel(Some(filteredTables))
-    }
+            ts.isEmpty || ts.contains(table.name.name)))))
+
+    jdbcProfile.createModel(filteredTables orElse Some(allTables))
   }
 
 }
