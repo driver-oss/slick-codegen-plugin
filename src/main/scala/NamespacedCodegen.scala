@@ -217,13 +217,17 @@ object SchemaParser {
   def createModel(jdbcProfile: JdbcProfile, mappedSchemas: Map[String, List[String]]): DBIO[Model] = {
     val allTables: DBIO[Vector[MTable]] = MTable.getTables
 
-    val filteredTables: DBIO[Vector[MTable]] = allTables.map(
-      (tables: Vector[MTable]) => tables.filter(table =>
-        table.name.schema.flatMap(mappedSchemas.get).exists(ts =>
-          ts.isEmpty || ts.contains(table.name.name))
+    if (mappedSchemas.isEmpty) {
+      jdbcProfile.createModel(Some(allTables))
+    } else {
+      val filteredTables: DBIO[Vector[MTable]] = allTables.map(
+        (tables: Vector[MTable]) => tables.filter(table =>
+          table.name.schema.flatMap(mappedSchemas.get).exists(ts =>
+            ts.isEmpty || ts.contains(table.name.name))
+        )
       )
-    )
-    jdbcProfile.createModel(Some(filteredTables))
+      jdbcProfile.createModel(Some(filteredTables))
+    }
   }
 
 }
