@@ -19,7 +19,7 @@ object CodegenPlugin extends AutoPlugin {
       Generator.run(
         new java.net.URI(codegenURI.value),
         codegenPackage.value,
-        codegenSchemaWhitelist.value,
+        Option(codegenSchemaWhitelist.value),
         codegenOutputPath.value,
         codegenForeignKeys.value
       )

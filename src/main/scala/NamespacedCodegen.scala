@@ -16,14 +16,14 @@ import slick.model.{Column, Model, Table}
 object Generator {
 
 
-  def run(uri: URI, pkg: String, schemaNames: List[String], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) = {
+  def run(uri: URI, pkg: String, schemaNames: Option[List[String]], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) = {
     val dc: DatabaseConfig[JdbcProfile] = DatabaseConfig.forURI[JdbcProfile](uri)
-    val parsedSchemas: Map[String, List[String]] = SchemaParser.parse(schemaNames)
-    val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemas)), Duration.Inf)
+    val parsedSchemasOpt: Option[Map[String, List[String]]] = SchemaParser.parse(schemaNames)
+    val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)), Duration.Inf)
 
     val generator = new Generator(uri, pkg, dbModel, outputPath, manualForeignKeys)
     val generatedCode = generator.code
-    parsedSchemas.keys.map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
+    parsedSchemasOpt.getOrElse(Map()).keys.map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
   }
 
 }
@@ -209,17 +209,19 @@ object SchemaParser {
     tcMappings.map{case (from, to) => ({getTableColumn(from); from}, getTableColumn(to))}
   }
 
-  def parse(schemaTableNames: List[String]): Map[String, List[String]] =
-    schemaTableNames.map(_.split('.'))
+  def parse(schemaTableNamesOpt: Option[List[String]]): Option[Map[String, List[String]]] =
+    schemaTableNamesOpt.map( tNames =>
+      tNames.map(_.split('.'))
       .groupBy(_.head)
       .mapValues(_.flatMap(_.tail))
+    )
 
-  def createModel(jdbcProfile: JdbcProfile, mappedSchemas: Map[String, List[String]]): DBIO[Model] = {
+  def createModel(jdbcProfile: JdbcProfile, mappedSchemasOpt: Option[Map[String, List[String]]]): DBIO[Model] = {
     val allTables: DBIO[Vector[MTable]] = MTable.getTables
 
-    if (mappedSchemas.isEmpty) {
-      jdbcProfile.createModel(Some(allTables))
-    } else {
+    if (mappedSchemasOpt.isEmpty) jdbcProfile.createModel(Some(allTables))
+    else {
+      val mappedSchemas = mappedSchemasOpt.get
       val filteredTables: DBIO[Vector[MTable]] = allTables.map(
         (tables: Vector[MTable]) => tables.filter(table =>
           table.name.schema.flatMap(mappedSchemas.get).exists(ts =>
