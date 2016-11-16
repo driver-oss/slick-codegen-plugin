@@ -19,10 +19,16 @@ object CodegenPlugin extends AutoPlugin {
       Generator.run(
         new java.net.URI(codegenURI.value),
         codegenPackage.value,
-        codegenSchemaWhitelist.value,
+        Some(codegenSchemaWhitelist.value).filter(_.nonEmpty),
         codegenOutputPath.value,
         codegenForeignKeys.value
       )
     }
+
+    lazy val baseCodegenSettings: Seq[Def.Setting[_]] = Seq(
+      codegen := slickCodeGenTask.value,
+      codegenSchemaWhitelist := List.empty,
+      codegenForeignKeys := Map.empty
+    )
   }
 }

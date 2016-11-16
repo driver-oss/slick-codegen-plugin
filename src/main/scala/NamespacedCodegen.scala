@@ -16,14 +16,14 @@ import slick.model.{Column, Model, Table}
 object Generator {
 
 
-  def run(uri: URI, pkg: String, schemaNames: List[String], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) = {
+  def run(uri: URI, pkg: String, schemaNames: Option[List[String]], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) = {
     val dc: DatabaseConfig[JdbcProfile] = DatabaseConfig.forURI[JdbcProfile](uri)
-    val parsedSchemas: Map[String, List[String]] = SchemaParser.parse(schemaNames)
-    val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemas)), Duration.Inf)
+    val parsedSchemasOpt: Option[Map[String, List[String]]] = schemaNames.map(SchemaParser.parse)
+    val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)), Duration.Inf)
 
     val generator = new Generator(uri, pkg, dbModel, outputPath, manualForeignKeys)
     val generatedCode = generator.code
-    parsedSchemas.keys.map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
+    parsedSchemasOpt.getOrElse(Map()).keys.map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
   }
 
 }
@@ -214,16 +214,16 @@ object SchemaParser {
       .groupBy(_.head)
       .mapValues(_.flatMap(_.tail))
 
-  def createModel(jdbcProfile: JdbcProfile, mappedSchemas: Map[String, List[String]]): DBIO[Model] = {
+  def createModel(jdbcProfile: JdbcProfile, mappedSchemasOpt: Option[Map[String, List[String]]]): DBIO[Model] = {
     val allTables: DBIO[Vector[MTable]] = MTable.getTables
 
-    val filteredTables: DBIO[Vector[MTable]] = allTables.map(
-      (tables: Vector[MTable]) => tables.filter(table =>
-        table.name.schema.flatMap(mappedSchemas.get).exists(ts =>
-          ts.isEmpty || ts.contains(table.name.name))
-      )
-    )
-    jdbcProfile.createModel(Some(filteredTables))
+    val filteredTables = mappedSchemasOpt.map(mappedSchemas =>
+      allTables.map(
+        (tables: Vector[MTable]) => tables.filter(table =>
+          table.name.schema.flatMap(mappedSchemas.get).exists(ts =>
+            ts.isEmpty || ts.contains(table.name.name)))))
+
+    jdbcProfile.createModel(filteredTables orElse Some(allTables))
   }
 
 }
