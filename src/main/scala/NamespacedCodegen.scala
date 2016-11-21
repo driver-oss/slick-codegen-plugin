@@ -87,8 +87,6 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
           |object ${schemaName} extends IdColumnTypes {
           |  override val database = xyz.driver.core.database.Database.fromConfig("${uri.getFragment()}")
           |  import database.profile.api._
-          |  // TODO: the name for this implicit should be changed in driver core
-          |  implicit val tColType = MappedColumnType.base[xyz.driver.core.time.Time, Long](time => time.millis, xyz.driver.core.time.Time(_))
           |  ${tableCode}
           |
           |}
