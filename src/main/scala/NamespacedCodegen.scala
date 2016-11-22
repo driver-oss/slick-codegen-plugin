@@ -14,7 +14,7 @@ import slick.dbio.DBIO
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
 import slick.{model => sModel}
-import slick.model.{Column, Model, Table}
+import slick.model.{Column, Model, Table, QualifiedName}
 
 object Generator {
 
@@ -23,7 +23,8 @@ object Generator {
           schemaNames: Option[List[String]],
           outputPath: String,
           manualForeignKeys: Map[(String, String), (String, String)],
-          schemaBaseClass: String) = {
+          schemaBaseClass: String,
+          idTypeName: String) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
@@ -37,7 +38,8 @@ object Generator {
                                   dbModel,
                                   outputPath,
                                   manualForeignKeys,
-                                  schemaBaseClass)
+                                  schemaBaseClass,
+                                  idTypeName)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -61,7 +63,7 @@ class PackageNameGenerator(pkg: String, dbModel: Model)
 class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
   val baseImports: String =
     s"""
-       |import xyz.driver.core._
+       |import xyz.driver.core.Id
        |
     |""".stripMargin
 
@@ -92,7 +94,8 @@ class Generator(uri: URI,
                 dbModel: Model,
                 outputPath: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
-                schemaBaseClass: String)
+                schemaBaseClass: String,
+                idTypeName: String)
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
@@ -199,11 +202,19 @@ class Generator(uri: URI,
           .getOrElse((table, column))
       }
 
+      def idType(tableName: QualifiedName) = {
+        val schemaObjectName = tableName.schema.getOrElse("`public`")
+        val rowTypeName = entityName(tableName.table)
+        s"$idTypeName[$schemaObjectName.$rowTypeName]"
+      }
+
       // re-write ids, and time types
       override def rawType: String = {
-        val (t, c) = derefColumn(table.model, column.model)
-        if (c.options.contains(slick.ast.ColumnOption.PrimaryKey))
-          TypeGenerator.idType(pkg, t)
+        val (referencedTable, referencedColumn) =
+          derefColumn(table.model, column.model)
+        if (referencedColumn.options.contains(
+              slick.ast.ColumnOption.PrimaryKey))
+          idType(referencedTable.name)
         else
           model.tpe match {
             // TODO: There should be a way to add adhoc custom time mappings
@@ -287,17 +298,6 @@ object SchemaParser {
     jdbcProfile.createModel(filteredTables orElse Some(allTables))
   }
 
-}
-
-object TypeGenerator extends StringGeneratorHelpers {
-  // generate the id types
-  def idType(pkg: String, t: sModel.Table): String = {
-    val header = s"Id["
-    val schemaName = t.name.schema.fold("")(_ + ".")
-    val tableName = (t.name.table).toCamelCase
-    val footer = "]"
-    s"${header}${pkg}.${schemaName}${tableName}Row${footer}"
-  }
 }
 
 object FileHelpers {

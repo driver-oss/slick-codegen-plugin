@@ -24,6 +24,10 @@ object CodegenPlugin extends AutoPlugin {
     lazy val codegenSchemaBaseClassParts = SettingKey[List[String]](
       "codegen-schema-base-class-parts",
       "parts inherited by each generated schema object")
+    lazy val codegenIdType = SettingKey[String](
+      "codegen-id-type",
+      "The in-scope type `T` of kind `T[TableRow]` to apply in place T for id columns."
+    )
 
     lazy val slickCodeGenTask =
       TaskKey[Unit]("gen-tables", "generate the table definitions")
@@ -36,6 +40,7 @@ object CodegenPlugin extends AutoPlugin {
     codegenSchemaWhitelist := List.empty,
     codegenForeignKeys := Map.empty,
     codegenSchemaBaseClassParts := List.empty,
+    codegenIdType := "Id",
     slickCodeGenTask := Def.taskDyn {
       Def.task {
         Generator.run(
@@ -47,7 +52,8 @@ object CodegenPlugin extends AutoPlugin {
           codegenSchemaBaseClassParts.value match {
             case Nil => "AnyRef"
             case parts => parts.mkString(" with ")
-          }
+          },
+          codegenIdType.value
         )
       }
     }.value
