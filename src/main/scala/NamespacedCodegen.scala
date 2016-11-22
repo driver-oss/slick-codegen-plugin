@@ -38,6 +38,7 @@ object Generator {
                                   outputPath,
                                   manualForeignKeys,
                                   schemaBaseClass)
+    generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
       .keys
