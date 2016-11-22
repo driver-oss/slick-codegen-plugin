@@ -12,6 +12,7 @@ object CodegenPlugin extends AutoPlugin {
     lazy val codegenOutputPath = SettingKey[String]("codegen-output-path", "directory to with the generated code will be written")
     lazy val codegenSchemaWhitelist = SettingKey[List[String]]("codegen-schema-whitelist", "schemas and tables to process")
     lazy val codegenForeignKeys = SettingKey[Map[TableColumn, TableColumn]]("codegen-foreign-keys", "foreign key references to data models add manually")
+    lazy val codegenSchemaBaseClassParts = SettingKey[List[String]]("codegen-schema-base-class-parts", "parts inherited by each generated schema object")
 
     lazy val slickCodeGenTask = TaskKey[Unit]("gen-tables", "generate the table definitions")
 
@@ -22,6 +23,7 @@ object CodegenPlugin extends AutoPlugin {
   override lazy val projectSettings = Seq(
     codegenSchemaWhitelist := List.empty,
     codegenForeignKeys := Map.empty,
+    codegenSchemaBaseClassParts := List.empty,
     slickCodeGenTask := Def.taskDyn {
       Def.task {
         Generator.run(
@@ -29,7 +31,11 @@ object CodegenPlugin extends AutoPlugin {
           codegenPackage.value,
           Some(codegenSchemaWhitelist.value).filter(_.nonEmpty),
           codegenOutputPath.value,
-          codegenForeignKeys.value
+          codegenForeignKeys.value,
+          codegenSchemaBaseClassParts.value match {
+            case Nil => "AnyRef"
+            case parts => parts.mkString(" with ")
+          }
         )
       }
     }.value
