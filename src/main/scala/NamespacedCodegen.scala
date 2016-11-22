@@ -16,12 +16,12 @@ import slick.model.{Column, Model, Table}
 object Generator {
 
 
-  def run(uri: URI, pkg: String, schemaNames: Option[List[String]], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) = {
+  def run(uri: URI, pkg: String, schemaNames: Option[List[String]], outputPath: String, manualForeignKeys: Map[(String, String), (String, String)], schemaBaseClass: String) = {
     val dc: DatabaseConfig[JdbcProfile] = DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] = schemaNames.map(SchemaParser.parse)
     val dbModel: Model = Await.result(dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)), Duration.Inf)
 
-    val generator = new Generator(uri, pkg, dbModel, outputPath, manualForeignKeys)
+    val generator = new Generator(uri, pkg, dbModel, outputPath, manualForeignKeys, schemaBaseClass)
     val generatedCode = generator.code
     parsedSchemasOpt.getOrElse(Map()).keys.map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
   }
@@ -43,7 +43,6 @@ class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
   val baseImports: String =
     s"""
        |import xyz.driver.core._
-       |import xyz.driver.core.database._
        |
     |""".stripMargin
 
@@ -68,7 +67,7 @@ class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
   override def code: String = baseImports + hlistImports + plainSqlMapperImports
 }
 
-class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manualForeignKeys: Map[(String, String), (String, String)]) extends SourceCodeGenerator(dbModel) with OutputHelpers {
+class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manualForeignKeys: Map[(String, String), (String, String)], schemaBaseClass: String) extends SourceCodeGenerator(dbModel) with OutputHelpers {
 
   val packageName = new PackageNameGenerator(pkg, dbModel).code
   val allImports: String = new ImportGenerator(dbModel).code
@@ -84,11 +83,9 @@ class Generator(uri: URI, pkg: String, dbModel: Model, outputPath: String, manua
       case (schemaName, tableDefs) =>
         val tableCode = tableDefs.sortBy(_.model.name.table).map(_.code.mkString("\n")) .mkString("\n\n")
         val generatedSchema = s"""
-          |object ${schemaName} extends IdColumnTypes {
+          |object ${schemaName} extends $schemaBaseClass {
           |  override val database = xyz.driver.core.database.Database.fromConfig("${uri.getFragment()}")
           |  import database.profile.api._
-          |  // TODO: the name for this implicit should be changed in driver core
-          |  implicit val tColType = MappedColumnType.base[xyz.driver.core.time.Time, Long](time => time.millis, xyz.driver.core.time.Time(_))
           |  ${tableCode}
           |
           |}
