@@ -7,14 +7,26 @@ object CodegenPlugin extends AutoPlugin {
   type TableColumn = (String, String)
 
   object autoImport {
-    lazy val codegenURI = SettingKey[String]("codegen-uri", "uri for the database configuration")
-    lazy val codegenPackage = SettingKey[String]("codegen-package", "package in which to place generated code")
-    lazy val codegenOutputPath = SettingKey[String]("codegen-output-path", "directory to with the generated code will be written")
-    lazy val codegenSchemaWhitelist = SettingKey[List[String]]("codegen-schema-whitelist", "schemas and tables to process")
-    lazy val codegenForeignKeys = SettingKey[Map[TableColumn, TableColumn]]("codegen-foreign-keys", "foreign key references to data models add manually")
-    lazy val codegenSchemaBaseClassParts = SettingKey[List[String]]("codegen-schema-base-class-parts", "parts inherited by each generated schema object")
+    lazy val codegenURI =
+      SettingKey[String]("codegen-uri", "uri for the database configuration")
+    lazy val codegenPackage = SettingKey[String](
+      "codegen-package",
+      "package in which to place generated code")
+    lazy val codegenOutputPath = SettingKey[String](
+      "codegen-output-path",
+      "directory to with the generated code will be written")
+    lazy val codegenSchemaWhitelist = SettingKey[List[String]](
+      "codegen-schema-whitelist",
+      "schemas and tables to process")
+    lazy val codegenForeignKeys = SettingKey[Map[TableColumn, TableColumn]](
+      "codegen-foreign-keys",
+      "foreign key references to data models add manually")
+    lazy val codegenSchemaBaseClassParts = SettingKey[List[String]](
+      "codegen-schema-base-class-parts",
+      "parts inherited by each generated schema object")
 
-    lazy val slickCodeGenTask = TaskKey[Unit]("gen-tables", "generate the table definitions")
+    lazy val slickCodeGenTask =
+      TaskKey[Unit]("gen-tables", "generate the table definitions")
 
   }
 
@@ -39,8 +51,6 @@ object CodegenPlugin extends AutoPlugin {
         )
       }
     }.value
-
   )
-
 
 }
