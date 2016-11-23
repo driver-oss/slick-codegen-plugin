@@ -24,7 +24,8 @@ object Generator {
           outputPath: String,
           manualForeignKeys: Map[(String, String), (String, String)],
           schemaBaseClass: String,
-          idType: Option[String]) = {
+          idType: Option[String],
+          schemaImports: List[String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
@@ -39,7 +40,8 @@ object Generator {
                                   outputPath,
                                   manualForeignKeys,
                                   schemaBaseClass,
-                                  idType)
+                                  idType,
+                                  schemaImports)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -60,12 +62,10 @@ class PackageNameGenerator(pkg: String, dbModel: Model)
        |""".stripMargin
 }
 
-class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
-  val baseImports: String =
-    s"""
-       |import xyz.driver.core.Id
-       |
-    |""".stripMargin
+class ImportGenerator(dbModel: Model, schemaImports: List[String])
+    extends SourceCodeGenerator(dbModel) {
+
+  val baseImports: String = schemaImports.map("import " + _).mkString("\n")
 
   val hlistImports: String =
     if (tables.exists(_.hlistEnabled))
@@ -95,12 +95,13 @@ class Generator(uri: URI,
                 outputPath: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
-                idType: Option[String])
+                idType: Option[String],
+                schemaImports: List[String])
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
   val packageName = new PackageNameGenerator(pkg, dbModel).code
-  val allImports: String = new ImportGenerator(dbModel).code
+  val allImports: String = new ImportGenerator(dbModel, schemaImports).code
 
   private val defaultIdImplementation =
     """|case class Id[T](v: Int)
