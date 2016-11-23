@@ -24,7 +24,7 @@ object Generator {
           outputPath: String,
           manualForeignKeys: Map[(String, String), (String, String)],
           schemaBaseClass: String,
-          idTypeName: String) = {
+          idType: Option[String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
@@ -39,7 +39,7 @@ object Generator {
                                   outputPath,
                                   manualForeignKeys,
                                   schemaBaseClass,
-                                  idTypeName)
+                                  idType)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -95,12 +95,18 @@ class Generator(uri: URI,
                 outputPath: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
-                idTypeName: String)
+                idType: Option[String])
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
   val packageName = new PackageNameGenerator(pkg, dbModel).code
   val allImports: String = new ImportGenerator(dbModel).code
+
+  private val defaultIdImplementation =
+    """|case class Id[T](v: Int)
+       |object Id {
+       |  implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))
+       |}""".stripMargin
 
   override def code: String = {
 
@@ -131,6 +137,13 @@ class Generator(uri: URI,
           pkg,
           s"${schemaName}.scala"
         )
+
+        if (idType.isEmpty) {
+          writeStringToFile(packageName + defaultIdImplementation,
+                            outputPath,
+                            pkg,
+                            "Id.scala")
+        }
 
         generatedSchema
     }.mkString("\n\n")
@@ -202,9 +215,10 @@ class Generator(uri: URI,
           .getOrElse((table, column))
       }
 
-      def idType(tableName: QualifiedName) = {
+      def tableReferenceName(tableName: QualifiedName) = {
         val schemaObjectName = tableName.schema.getOrElse("`public`")
         val rowTypeName = entityName(tableName.table)
+        val idTypeName = idType.getOrElse("Id")
         s"$idTypeName[$schemaObjectName.$rowTypeName]"
       }
 
@@ -214,7 +228,7 @@ class Generator(uri: URI,
           derefColumn(table.model, column.model)
         if (referencedColumn.options.contains(
               slick.ast.ColumnOption.PrimaryKey))
-          idType(referencedTable.name)
+          tableReferenceName(referencedTable.name)
         else
           model.tpe match {
             // TODO: There should be a way to add adhoc custom time mappings
