@@ -103,11 +103,17 @@ class Generator(uri: URI,
   val packageName = new PackageNameGenerator(pkg, dbModel).code
   val allImports: String = new ImportGenerator(dbModel, schemaImports).code
 
-  private val defaultIdImplementation =
-    """|case class Id[T](v: Int)
-       |object Id {
+  val defaultIdImplementation =
+    """|final case class Id[T](v: Int)
+       |trait DefaultIdTypeMapper {
+       |  val database: xyz.driver.core.database.Database
+       |  import database.profile.api._
        |  implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))
-       |}""".stripMargin
+       |}
+       |""".stripMargin
+
+  val defaultIdTypeMapper =
+    "implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))\n"
 
   override def code: String = {
 

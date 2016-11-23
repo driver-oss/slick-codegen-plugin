@@ -54,7 +54,10 @@ object CodegenPlugin extends AutoPlugin {
           Some(codegenSchemaWhitelist.value).filter(_.nonEmpty),
           codegenOutputPath.value,
           codegenForeignKeys.value,
-          codegenSchemaBaseClassParts.value match {
+          (if (codegenIdType.value.isEmpty)
+             codegenSchemaBaseClassParts.value :+ "DefaultIdTypeMapper"
+           else
+             codegenSchemaBaseClassParts.value) match {
             case Nil => "AnyRef"
             case parts => parts.mkString(" with ")
           },
