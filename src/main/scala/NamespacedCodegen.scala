@@ -106,8 +106,8 @@ class Generator(uri: URI,
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
        |trait DefaultIdTypeMapper {
-       |  val database: xyz.driver.core.database.Database
-       |  import database.profile.api._
+       |  val profile: slick.driver.JdbcProfile
+       |  import profile.api._
        |  implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))
        |}
        |""".stripMargin
@@ -130,9 +130,8 @@ class Generator(uri: URI,
           .mkString("\n\n")
         val generatedSchema = s"""
           |object ${schemaName} extends $schemaBaseClass {
-          |  override val database = xyz.driver.core.database.Database.fromConfig("${uri
-                                   .getFragment()}")
-          |  import database.profile.api._
+          |  val profile = slick.backend.DatabaseConfig.forConfig("${uri.getFragment()}").profile
+          |  import profile.api._
           |  ${tableCode}
           |
           |}
