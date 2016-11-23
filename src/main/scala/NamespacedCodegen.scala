@@ -112,9 +112,6 @@ class Generator(uri: URI,
        |}
        |""".stripMargin
 
-  val defaultIdTypeMapper =
-    "implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))\n"
-
   override def code: String = {
 
     val sortedSchemaTables: List[(String, Seq[TableDef])] = tables
