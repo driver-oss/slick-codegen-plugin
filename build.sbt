@@ -20,8 +20,10 @@ val scalaVersionValue = "2.10.6"
 scalaVersion := scalaVersionValue
 
 // The following don't work with scala 2.10
-scalacOptions := scalacOptions.value.filterNot(
-  Seq("-Xlint:-missing-interpolator", "-Ywarn-unused", "-Ywarn-unused-import").contains)
+scalacOptions := scalacOptions.value.filterNot(Seq(
+  "-Xlint:-missing-interpolator",
+  "-Ywarn-unused",
+  "-Ywarn-unused-import").contains)
 
 val slickVersionValue = "3.1.1"
 
