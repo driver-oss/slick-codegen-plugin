@@ -127,7 +127,7 @@ class Generator(uri: URI,
           .mkString("\n\n")
         val generatedSchema = s"""
           |object ${schemaName} extends {
-          |  val profile = slick.backend.DatabaseConfig.forConfig("${uri.getFragment()}").driver
+          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri.getFragment()}").driver
           |} with $schemaBaseClass {
           |  import profile.api._
           |  ${tableCode}
