@@ -25,7 +25,8 @@ object Generator {
           manualForeignKeys: Map[(String, String), (String, String)],
           schemaBaseClass: String,
           idType: Option[String],
-          schemaImports: List[String]) = {
+    schemaImports: List[String],
+  typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
@@ -41,7 +42,8 @@ object Generator {
                                   manualForeignKeys,
                                   schemaBaseClass,
                                   idType,
-                                  schemaImports)
+      schemaImports,
+    typeReplacements)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -96,7 +98,8 @@ class Generator(uri: URI,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
                 idType: Option[String],
-                schemaImports: List[String])
+  schemaImports: List[String],
+  typeReplacements: Map[String, String])
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
@@ -226,20 +229,14 @@ class Generator(uri: URI,
         s"$idTypeName[$schemaObjectName.$rowTypeName]"
       }
 
-      // re-write ids, and time types
+      // re-write ids other custom types
       override def rawType: String = {
         val (referencedTable, referencedColumn) =
           derefColumn(table.model, column.model)
         if (referencedColumn.options.contains(
               slick.ast.ColumnOption.PrimaryKey))
           tableReferenceName(referencedTable.name)
-        else
-          model.tpe match {
-            // TODO: There should be a way to add adhoc custom time mappings
-            case "java.sql.Time" => "xyz.driver.core.time.Time"
-            case "java.sql.Timestamp" => "xyz.driver.core.time.Time"
-            case _ => super.rawType
-          }
+        else typeReplacements.getOrElse(model.tpe, model.tpe)
       }
     }
 

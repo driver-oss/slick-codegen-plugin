@@ -32,6 +32,10 @@ object CodegenPlugin extends AutoPlugin {
       "codegen-schema-imports",
       "A list of things to import into each schema definition"
     )
+    lazy val codegenTypeReplacements = SettingKey[Map[String, String]](
+      "codegen-type-replacements",
+      "A map of types to find and replace"
+    )
 
     lazy val slickCodeGenTask =
       TaskKey[Unit]("gen-tables", "generate the table definitions")
@@ -46,6 +50,7 @@ object CodegenPlugin extends AutoPlugin {
     codegenSchemaBaseClassParts := List.empty,
     codegenIdType := Option.empty,
     codegenSchemaImports := List.empty,
+    codegenTypeReplacements := Map.empty,
     slickCodeGenTask := Def.taskDyn {
       Def.task {
         Generator.run(
@@ -62,7 +67,8 @@ object CodegenPlugin extends AutoPlugin {
             case parts => parts.mkString(" with ")
           },
           codegenIdType.value,
-          codegenSchemaImports.value
+          codegenSchemaImports.value,
+          codegenTypeReplacements.value
         )
       }
     }.value
