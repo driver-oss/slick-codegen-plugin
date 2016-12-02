@@ -14,7 +14,7 @@ import slick.dbio.DBIO
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
 import slick.{model => sModel}
-import slick.model.{Column, Model, Table}
+import slick.model.{Column, Model, Table, QualifiedName}
 
 object Generator {
 
@@ -23,7 +23,10 @@ object Generator {
           schemaNames: Option[List[String]],
           outputPath: String,
           manualForeignKeys: Map[(String, String), (String, String)],
-          schemaBaseClass: String) = {
+          schemaBaseClass: String,
+          idType: Option[String],
+    schemaImports: List[String],
+  typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
@@ -37,7 +40,10 @@ object Generator {
                                   dbModel,
                                   outputPath,
                                   manualForeignKeys,
-                                  schemaBaseClass)
+                                  schemaBaseClass,
+                                  idType,
+      schemaImports,
+    typeReplacements)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -58,12 +64,10 @@ class PackageNameGenerator(pkg: String, dbModel: Model)
        |""".stripMargin
 }
 
-class ImportGenerator(dbModel: Model) extends SourceCodeGenerator(dbModel) {
-  val baseImports: String =
-    s"""
-       |import xyz.driver.core._
-       |
-    |""".stripMargin
+class ImportGenerator(dbModel: Model, schemaImports: List[String])
+    extends SourceCodeGenerator(dbModel) {
+
+  val baseImports: String = schemaImports.map("import " + _).mkString("\n")
 
   val hlistImports: String =
     if (tables.exists(_.hlistEnabled))
@@ -92,12 +96,24 @@ class Generator(uri: URI,
                 dbModel: Model,
                 outputPath: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
-                schemaBaseClass: String)
+                schemaBaseClass: String,
+                idType: Option[String],
+  schemaImports: List[String],
+  typeReplacements: Map[String, String])
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
   val packageName = new PackageNameGenerator(pkg, dbModel).code
-  val allImports: String = new ImportGenerator(dbModel).code
+  val allImports: String = new ImportGenerator(dbModel, schemaImports).code
+
+  val defaultIdImplementation =
+    """|final case class Id[T](v: Int)
+       |trait DefaultIdTypeMapper {
+       |  val profile: slick.driver.JdbcProfile
+       |  import profile.api._
+       |  implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))
+       |}
+       |""".stripMargin
 
   override def code: String = {
 
@@ -113,10 +129,10 @@ class Generator(uri: URI,
           .map(_.code.mkString("\n"))
           .mkString("\n\n")
         val generatedSchema = s"""
-          |object ${schemaName} extends $schemaBaseClass {
-          |  override val database = xyz.driver.core.database.Database.fromConfig("${uri
-                                   .getFragment()}")
-          |  import database.profile.api._
+          |object ${schemaName} extends {
+          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri.getFragment()}").driver
+          |} with $schemaBaseClass {
+          |  import profile.api._
           |  ${tableCode}
           |
           |}
@@ -128,6 +144,13 @@ class Generator(uri: URI,
           pkg,
           s"${schemaName}.scala"
         )
+
+        if (idType.isEmpty) {
+          writeStringToFile(packageName + defaultIdImplementation,
+                            outputPath,
+                            pkg,
+                            "Id.scala")
+        }
 
         generatedSchema
     }.mkString("\n\n")
@@ -199,18 +222,21 @@ class Generator(uri: URI,
           .getOrElse((table, column))
       }
 
-      // re-write ids, and time types
+      def tableReferenceName(tableName: QualifiedName) = {
+        val schemaObjectName = tableName.schema.getOrElse("`public`")
+        val rowTypeName = entityName(tableName.table)
+        val idTypeName = idType.getOrElse("Id")
+        s"$idTypeName[$schemaObjectName.$rowTypeName]"
+      }
+
+      // re-write ids other custom types
       override def rawType: String = {
-        val (t, c) = derefColumn(table.model, column.model)
-        if (c.options.contains(slick.ast.ColumnOption.PrimaryKey))
-          TypeGenerator.idType(pkg, t)
-        else
-          model.tpe match {
-            // TODO: There should be a way to add adhoc custom time mappings
-            case "java.sql.Time" => "xyz.driver.core.time.Time"
-            case "java.sql.Timestamp" => "xyz.driver.core.time.Time"
-            case _ => super.rawType
-          }
+        val (referencedTable, referencedColumn) =
+          derefColumn(table.model, column.model)
+        if (referencedColumn.options.contains(
+              slick.ast.ColumnOption.PrimaryKey))
+          tableReferenceName(referencedTable.name)
+        else typeReplacements.getOrElse(model.tpe, model.tpe)
       }
     }
 
@@ -287,17 +313,6 @@ object SchemaParser {
     jdbcProfile.createModel(filteredTables orElse Some(allTables))
   }
 
-}
-
-object TypeGenerator extends StringGeneratorHelpers {
-  // generate the id types
-  def idType(pkg: String, t: sModel.Table): String = {
-    val header = s"Id["
-    val schemaName = t.name.schema.fold("")(_ + ".")
-    val tableName = (t.name.table).toCamelCase
-    val footer = "]"
-    s"${header}${pkg}.${schemaName}${tableName}Row${footer}"
-  }
 }
 
 object FileHelpers {
