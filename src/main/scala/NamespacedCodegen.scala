@@ -57,12 +57,10 @@ object Generator {
 class PackageNameGenerator(pkg: String, dbModel: Model)
     extends SourceCodeGenerator(dbModel) {
   override def code: String =
-    s"""
-       |// format: OFF
-       |// scalastyle:off
-       |package ${pkg}
-       |
-       |""".stripMargin
+    s"""|// scalastyle:off
+        |package ${pkg}
+        |
+        |""".stripMargin
 }
 
 class ImportGenerator(dbModel: Model, schemaImports: List[String])
