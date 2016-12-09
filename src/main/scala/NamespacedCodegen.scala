@@ -25,12 +25,13 @@ object Generator {
           manualForeignKeys: Map[(String, String), (String, String)],
           schemaBaseClass: String,
           idType: Option[String],
-    schemaImports: List[String],
-  typeReplacements: Map[String, String]) = {
+          schemaImports: List[String],
+          typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
       schemaNames.map(SchemaParser.parse)
+
     val dbModel: Model = Await.result(
       dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
       Duration.Inf)
@@ -42,8 +43,8 @@ object Generator {
                                   manualForeignKeys,
                                   schemaBaseClass,
                                   idType,
-      schemaImports,
-    typeReplacements)
+                                  schemaImports,
+                                  typeReplacements)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -56,35 +57,27 @@ object Generator {
 class PackageNameGenerator(pkg: String, dbModel: Model)
     extends SourceCodeGenerator(dbModel) {
   override def code: String =
-    s"""
-       |// format: OFF
-       |// scalastyle:off
-       |package ${pkg}
-       |
-       |""".stripMargin
+    s"""|// scalastyle:off
+        |package ${pkg}
+        |
+        |""".stripMargin
 }
 
 class ImportGenerator(dbModel: Model, schemaImports: List[String])
     extends SourceCodeGenerator(dbModel) {
 
-  val baseImports: String = schemaImports.map("import " + _).mkString("\n")
+  val baseImports: String = schemaImports.map("import " + _).mkString("\n") + "\n"
 
   val hlistImports: String =
-    if (tables.exists(_.hlistEnabled))
-      """
-        |import slick.collection.heterogeneous._
-        |import slick.collection.heterogeneous.syntax._
-        |
-        |""".stripMargin
-    else ""
+    """|import slick.collection.heterogeneous._
+       |import slick.collection.heterogeneous.syntax._
+       |""".stripMargin
 
   val plainSqlMapperImports: String =
     if (tables.exists(_.PlainSqlMapper.enabled))
-      """
-        |import slick.jdbc.{GetResult => GR}
-        |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
-        |
-        |""".stripMargin
+      """|import slick.jdbc.{GetResult => GR}
+         |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
+         |""".stripMargin
     else ""
 
   override def code: String =
@@ -98,8 +91,8 @@ class Generator(uri: URI,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
                 idType: Option[String],
-  schemaImports: List[String],
-  typeReplacements: Map[String, String])
+                schemaImports: List[String],
+                typeReplacements: Map[String, String])
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
@@ -128,13 +121,33 @@ class Generator(uri: URI,
           .sortBy(_.model.name.table)
           .map(_.code.mkString("\n"))
           .mkString("\n\n")
+
+        val ddlCode =
+          (if (ddlEnabled) {
+             "\n/** DDL for all tables. Call .create to execute. */" +
+               (
+                 if (tableDefs.length > 5)
+                   "\nlazy val schema: profile.SchemaDescription = Array(" + tableDefs
+                     .map(_.TableValue.name + ".schema")
+                     .mkString(", ") + ").reduceLeft(_ ++ _)"
+                 else if (tableDefs.nonEmpty)
+                   "\nlazy val schema: profile.SchemaDescription = " + tableDefs
+                     .map(_.TableValue.name + ".schema")
+                     .mkString(" ++ ")
+                 else
+                   "\nlazy val schema: profile.SchemaDescription = profile.DDL(Nil, Nil)"
+               ) +
+               "\n\n"
+           } else "")
+
         val generatedSchema = s"""
           |object ${schemaName} extends {
-          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri.getFragment()}").driver
+          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
+                                   .getFragment()}").driver
           |} with $schemaBaseClass {
           |  import profile.api._
           |  ${tableCode}
-          |
+          |  ${ddlCode}
           |}
           |// scalastyle:on""".stripMargin
 
