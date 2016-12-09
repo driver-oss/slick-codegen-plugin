@@ -25,12 +25,13 @@ object Generator {
           manualForeignKeys: Map[(String, String), (String, String)],
           schemaBaseClass: String,
           idType: Option[String],
-    schemaImports: List[String],
-  typeReplacements: Map[String, String]) = {
+          schemaImports: List[String],
+          typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
       schemaNames.map(SchemaParser.parse)
+
     val dbModel: Model = Await.result(
       dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
       Duration.Inf)
@@ -42,8 +43,8 @@ object Generator {
                                   manualForeignKeys,
                                   schemaBaseClass,
                                   idType,
-      schemaImports,
-    typeReplacements)
+                                  schemaImports,
+                                  typeReplacements)
     generator.code // Yes... Files are written as a side effect
     parsedSchemasOpt
       .getOrElse(Map())
@@ -98,8 +99,8 @@ class Generator(uri: URI,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
                 idType: Option[String],
-  schemaImports: List[String],
-  typeReplacements: Map[String, String])
+                schemaImports: List[String],
+                typeReplacements: Map[String, String])
     extends SourceCodeGenerator(dbModel)
     with OutputHelpers {
 
@@ -130,7 +131,8 @@ class Generator(uri: URI,
           .mkString("\n\n")
         val generatedSchema = s"""
           |object ${schemaName} extends {
-          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri.getFragment()}").driver
+          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
+                                   .getFragment()}").driver
           |} with $schemaBaseClass {
           |  import profile.api._
           |  ${tableCode}
