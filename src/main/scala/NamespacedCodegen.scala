@@ -126,6 +126,25 @@ class Generator(uri: URI,
           .sortBy(_.model.name.table)
           .map(_.code.mkString("\n"))
           .mkString("\n\n")
+
+        val ddlCode =
+          (if (ddlEnabled) {
+             "\n/** DDL for all tables. Call .create to execute. */" +
+               (
+                 if (tableDefs.length > 5)
+                   "\nlazy val schema: profile.SchemaDescription = Array(" + tableDefs
+                     .map(_.TableValue.name + ".schema")
+                     .mkString(", ") + ").reduceLeft(_ ++ _)"
+                 else if (tableDefs.nonEmpty)
+                   "\nlazy val schema: profile.SchemaDescription = " + tableDefs
+                     .map(_.TableValue.name + ".schema")
+                     .mkString(" ++ ")
+                 else
+                   "\nlazy val schema: profile.SchemaDescription = profile.DDL(Nil, Nil)"
+               ) +
+               "\n\n"
+           } else "")
+
         val generatedSchema = s"""
           |object ${schemaName} extends {
           |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
@@ -133,7 +152,7 @@ class Generator(uri: URI,
           |} with $schemaBaseClass {
           |  import profile.api._
           |  ${tableCode}
-          |
+          |  ${ddlCode}
           |}
           |// scalastyle:on""".stripMargin
 
