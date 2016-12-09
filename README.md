@@ -14,8 +14,10 @@ credentials += Credentials("Artifactory Realm", "drivergrp.jfrog.io", "sbt-publi
 addSbtPlugin("xyz.driver" % "sbt-slick-codegen" % "0.8")
 
 // Replace with the appropriate jdbc driver for your database:
-libraryDependencies += "org.postgresql" % "postgresql" % "9.4.1212"
+libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1104-jdbc41"
 ```
+
+(note that postgres jdbc driver `9.4.x` will not expose columns in certain metadata "tables", causing generated code not to compile)
 
 ### build.sbt
 
