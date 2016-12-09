@@ -66,21 +66,18 @@ class PackageNameGenerator(pkg: String, dbModel: Model)
 class ImportGenerator(dbModel: Model, schemaImports: List[String])
     extends SourceCodeGenerator(dbModel) {
 
-  val baseImports: String = schemaImports.map("import " + _).mkString("\n")
+  val baseImports: String = schemaImports.map("import " + _).mkString("\n") + "\n"
 
   val hlistImports: String =
     """|import slick.collection.heterogeneous._
        |import slick.collection.heterogeneous.syntax._
-       |
        |""".stripMargin
 
   val plainSqlMapperImports: String =
     if (tables.exists(_.PlainSqlMapper.enabled))
-      """
-        |import slick.jdbc.{GetResult => GR}
-        |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
-        |
-        |""".stripMargin
+      """|import slick.jdbc.{GetResult => GR}
+         |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
+         |""".stripMargin
     else ""
 
   override def code: String =
