@@ -71,13 +71,10 @@ class ImportGenerator(dbModel: Model, schemaImports: List[String])
   val baseImports: String = schemaImports.map("import " + _).mkString("\n")
 
   val hlistImports: String =
-    if (tables.exists(_.hlistEnabled))
-      """
-        |import slick.collection.heterogeneous._
-        |import slick.collection.heterogeneous.syntax._
-        |
-        |""".stripMargin
-    else ""
+    """|import slick.collection.heterogeneous._
+       |import slick.collection.heterogeneous.syntax._
+       |
+       |""".stripMargin
 
   val plainSqlMapperImports: String =
     if (tables.exists(_.PlainSqlMapper.enabled))
