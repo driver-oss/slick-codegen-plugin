@@ -36,6 +36,8 @@ object Generator {
       dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
       Duration.Inf)
 
+    dc.db.close()
+
     val generator = new Generator(uri,
                                   pkg,
                                   dbModel,
