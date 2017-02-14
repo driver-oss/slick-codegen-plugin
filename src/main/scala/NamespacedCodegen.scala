@@ -32,9 +32,13 @@ object Generator {
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
       schemaNames.map(SchemaParser.parse)
 
-    val dbModel: Model = Await.result(
-      dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
-      Duration.Inf)
+    val dbModel: Model = try {
+      Await.result(
+        dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
+        Duration.Inf)
+    } finally {
+      dc.db.close()
+    }
 
     val generator = new Generator(uri,
                                   pkg,
