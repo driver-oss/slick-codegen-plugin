@@ -67,13 +67,14 @@ object CodegenPlugin extends AutoPlugin {
               config.outputPackage,
               Some(config.schemaWhitelist).filter(_.nonEmpty),
               config.outputPath,
-              config.foreignKeys,
-              (if (codegenIdType.value.isEmpty)
-                 codegenSchemaBaseClassParts.value :+ "DefaultIdTypeMapper"
-               else
-                 codegenSchemaBaseClassParts.value) match {
-                case Nil => "AnyRef"
-                case parts => parts.mkString(" with ")
+              config.foreignKeys, {
+                val parts =
+                  (if (codegenIdType.value.isEmpty)
+                     codegenSchemaBaseClassParts.value :+ "DefaultIdTypeMapper"
+                   else
+                     codegenSchemaBaseClassParts.value)
+
+                Some(parts).filter(_.nonEmpty).map(_.mkString(" with "))
               },
               codegenIdType.value,
               codegenSchemaImports.value,

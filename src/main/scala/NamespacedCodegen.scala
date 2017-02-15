@@ -23,7 +23,7 @@ object Generator {
           schemaNames: Option[List[String]],
           outputPath: String,
           manualForeignKeys: Map[(String, String), (String, String)],
-          schemaBaseClass: String, // TODO: Keep it optional?
+          parentType: Option[String],
           idType: Option[String],
           schemaImports: List[String],
           typeReplacements: Map[String, String]) = {
@@ -49,21 +49,19 @@ object Generator {
                                        Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
-          val generator = new Generator(
-            pkg, // still necessary
-            dbModel,
-            schemaName, // still necessary?
-            schemaOnlyModel,
-            manualForeignKeys,
-            schemaBaseClass, //still necessary if we use parentType below?
-            idType,
-            schemaImports,
-            typeReplacements)
+          val generator = new Generator(pkg, // still necessary
+                                        dbModel,
+                                        schemaName, // still necessary?
+                                        schemaOnlyModel,
+                                        manualForeignKeys,
+                                        idType,
+                                        schemaImports,
+                                        typeReplacements)
           generator.writeStringToFile(content = generator.packageCode(
                                         profile = profile,
                                         pkg = pkg,
                                         container = schemaName,
-                                        parentType = Some(schemaBaseClass)),
+                                        parentType = parentType),
                                       folder = outputPath,
                                       pkg = pkg,
                                       fileName = s"${schemaName}.scala")
@@ -94,7 +92,6 @@ class Generator(pkg: String,
                 schemaName: String,
                 schemaOnlyModel: Model,
                 manualForeignKeys: Map[(String, String), (String, String)],
-                schemaBaseClass: String,
                 idType: Option[String],
                 schemaImports: List[String],
                 typeReplacements: Map[String, String])
@@ -121,7 +118,7 @@ class Generator(pkg: String,
         |$allImports
         |object ${container} extends {
         |  val profile = $profile
-        |} with $schemaBaseClass {
+        |} with ${parentType.getOrElse("AnyRef")} {
         |  import profile.api._
         |  ${code}
         |}""".stripMargin
