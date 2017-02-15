@@ -131,13 +131,13 @@ class Generator(pkg: String,
        |}
        |""".stripMargin
 
+  override def tables = {
+    super.tables
+      .filter(_.model.name.schema.getOrElse("`public`") == schemaName)
+  }
+
   override def code: String = {
-
-    val schemaTables =
-      tables.filter(_.model.name.schema.getOrElse("`public`") == schemaName)
-    // TODO override `tables` instead of `code`
-
-    val tableCode = schemaTables
+    val tableCode = tables
       .sortBy(_.model.name.table)
       .map(_.code.mkString("\n"))
       .mkString("\n\n")
@@ -146,12 +146,12 @@ class Generator(pkg: String,
       (if (ddlEnabled) {
          "\n/** DDL for all tables. Call .create to execute. */" +
            (
-             if (schemaTables.length > 5)
-               "\nlazy val schema: profile.SchemaDescription = Array(" + schemaTables
+             if (tables.length > 5)
+               "\nlazy val schema: profile.SchemaDescription = Array(" + tables
                  .map(_.TableValue.name + ".schema")
                  .mkString(", ") + ").reduceLeft(_ ++ _)"
-             else if (schemaTables.nonEmpty)
-               "\nlazy val schema: profile.SchemaDescription = " + schemaTables
+             else if (tables.nonEmpty)
+               "\nlazy val schema: profile.SchemaDescription = " + tables
                  .map(_.TableValue.name + ".schema")
                  .mkString(" ++ ")
              else
