@@ -83,14 +83,6 @@ object Generator {
 
 }
 
-class PackageNameGenerator(pkg: String, dbModel: Model)
-    extends SourceCodeGenerator(dbModel) {
-  override def code: String =
-    s"""|package ${pkg}
-        |
-        |""".stripMargin
-}
-
 class ImportGenerator(dbModel: Model, schemaImports: List[String])
     extends SourceCodeGenerator(dbModel) {
   override def code: String =
@@ -109,7 +101,6 @@ class Generator(pkg: String,
     extends SourceCodeGenerator(schemaOnlyModel)
     with OutputHelpers {
 
-  val packageName = new PackageNameGenerator(pkg, fullDatabaseModel).code
   val allImports: String =
     new ImportGenerator(fullDatabaseModel, schemaImports).code
 
@@ -126,12 +117,14 @@ class Generator(pkg: String,
                            pkg: String,
                            container: String,
                            parentType: Option[String]): String = {
-    packageName + allImports + s"""|object ${container} extends {
-                                   |  val profile = $profile
-                                   |} with $schemaBaseClass {
-                                   |  import profile.api._
-                                   |  ${code}
-                                   |}""".stripMargin
+    s"""|package $pkg
+        |$allImports
+        |object ${container} extends {
+        |  val profile = $profile
+        |} with $schemaBaseClass {
+        |  import profile.api._
+        |  ${code}
+        |}""".stripMargin
     // TODO: use parentType
   }
 
