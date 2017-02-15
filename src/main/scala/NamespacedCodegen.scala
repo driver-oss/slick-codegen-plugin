@@ -94,26 +94,8 @@ class PackageNameGenerator(pkg: String, dbModel: Model)
 
 class ImportGenerator(dbModel: Model, schemaImports: List[String])
     extends SourceCodeGenerator(dbModel) {
-
-  val baseImports: String = schemaImports
-      .map("import " + _)
-      .mkString("\n") + "\n"
-
-  val hlistImports: String =
-    """|import slick.collection.heterogeneous._
-       |import slick.collection.heterogeneous.syntax._
-       |""".stripMargin
-
-  val plainSqlMapperImports: String =
-    if (tables.exists(_.PlainSqlMapper.enabled))
-      """|import slick.jdbc.{GetResult => GR}
-         |//NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.\n
-         |""".stripMargin
-    else ""
-
   override def code: String =
-    baseImports + hlistImports + plainSqlMapperImports
-  // remove the latter two when go back to inherriting `def code`
+    schemaImports.map("import " + _).mkString("\n") + "\n"
 }
 
 class Generator(pkg: String,
@@ -140,44 +122,6 @@ class Generator(pkg: String,
        |  implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))
        |}
        |""".stripMargin
-
-  // override def tables = {
-  //   dbModel.tables.map(Table).sortBy(_.TableClass.rawName.toLowerCase)
-  //     .filter(_.model.name.schema.getOrElse("`public`") == schemaName)
-  // }
-  // Can't override with final
-  // Can't reference super with lazy
-
-  override def code: String = {
-    val tableCode = tables.map(_.code.mkString("\n")).mkString("\n\n")
-
-    val ddlCode =
-      (if (ddlEnabled) {
-         "\n/** DDL for all tables. Call .create to execute. */" +
-           (
-             if (tables.length > 5)
-               "\nlazy val schema: profile.SchemaDescription = Array(" + tables
-                 .map(_.TableValue.name + ".schema")
-                 .mkString(", ") + ").reduceLeft(_ ++ _)"
-             else if (tables.nonEmpty)
-               "\nlazy val schema: profile.SchemaDescription = " + tables
-                 .map(_.TableValue.name + ".schema")
-                 .mkString(" ++ ")
-             else
-               "\nlazy val schema: profile.SchemaDescription = profile.DDL(Nil, Nil)"
-           ) +
-           "\n\n"
-       } else "")
-
-    if (idType.isEmpty) { // TODO move out
-      writeStringToFile(packageName + defaultIdImplementation,
-                        "", //outputPath,
-                        pkg,
-                        "Id.scala")
-    }
-
-    tableCode + "\n  " + ddlCode
-  }
 
   override def packageCode(profile: String,
                            pkg: String,
