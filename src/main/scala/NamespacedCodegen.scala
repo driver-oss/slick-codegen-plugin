@@ -49,7 +49,7 @@ object Generator {
                                        Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
-          val generator = new Generator(pkg, // still necessary
+          val generator = new Generator(pkg,
                                         dbModel,
                                         schemaOnlyModel,
                                         manualForeignKeys,
@@ -64,18 +64,10 @@ object Generator {
             folder = outputPath,
             pkg = pkg,
             fileName = s"${schemaName}.scala")
-
-          generator.code // Yes... Files are written as a side effect
       }
-
     } finally {
       dc.db.close()
     }
-
-    parsedSchemasOpt
-      .getOrElse(Map())
-      .keys
-      .map(schemaName => FileHelpers.schemaOutputPath(outputPath, schemaName))
   }
 
 }
@@ -120,7 +112,6 @@ class Generator(pkg: String,
         |  import profile.api._
         |  ${code}
         |}""".stripMargin
-    // TODO: use parentType
   }
 
   override def Table = new Table(_) { table =>
@@ -275,10 +266,4 @@ object SchemaParser {
 
     jdbcProfile.createModel(filteredTables orElse Some(allTables))
   }
-
-}
-
-object FileHelpers {
-  def schemaOutputPath(path: String, schemaName: String): String =
-    Paths.get(path, s"${schemaName}.scala").toAbsolutePath().toString()
 }
