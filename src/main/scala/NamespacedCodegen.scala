@@ -51,20 +51,19 @@ object Generator {
 
           val generator = new Generator(pkg, // still necessary
                                         dbModel,
-                                        schemaName, // still necessary?
                                         schemaOnlyModel,
                                         manualForeignKeys,
                                         idType,
                                         schemaImports,
                                         typeReplacements)
-          generator.writeStringToFile(content = generator.packageCode(
-                                        profile = profile,
-                                        pkg = pkg,
-                                        container = schemaName,
-                                        parentType = parentType),
-                                      folder = outputPath,
-                                      pkg = pkg,
-                                      fileName = s"${schemaName}.scala")
+          generator.writeStringToFile(
+            content = generator.packageCode(profile = profile,
+                                            pkg = pkg,
+                                            container = schemaName,
+                                            parentType = parentType),
+            folder = outputPath,
+            pkg = pkg,
+            fileName = s"${schemaName}.scala")
 
           generator.code // Yes... Files are written as a side effect
       }
@@ -89,7 +88,6 @@ class ImportGenerator(dbModel: Model, schemaImports: List[String])
 
 class Generator(pkg: String,
                 fullDatabaseModel: Model,
-                schemaName: String,
                 schemaOnlyModel: Model,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 idType: Option[String],
