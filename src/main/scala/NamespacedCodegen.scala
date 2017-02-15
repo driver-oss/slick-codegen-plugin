@@ -129,7 +129,8 @@ class Generator(pkg: String,
     with OutputHelpers {
 
   val packageName = new PackageNameGenerator(pkg, fullDatabaseModel).code
-  val allImports: String = new ImportGenerator(fullDatabaseModel, schemaImports).code
+  val allImports: String =
+    new ImportGenerator(fullDatabaseModel, schemaImports).code
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
@@ -148,10 +149,7 @@ class Generator(pkg: String,
   // Can't reference super with lazy
 
   override def code: String = {
-    val tableCode = tables
-      .sortBy(_.model.name.table)
-      .map(_.code.mkString("\n"))
-      .mkString("\n\n")
+    val tableCode = tables.map(_.code.mkString("\n")).mkString("\n\n")
 
     val ddlCode =
       (if (ddlEnabled) {
