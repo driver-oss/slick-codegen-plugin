@@ -40,16 +40,21 @@ object Generator {
       dc.db.close()
     }
 
-    val generator = new Generator(uri,
-                                  pkg,
-                                  dbModel,
-                                  outputPath,
-                                  manualForeignKeys,
-                                  schemaBaseClass,
-                                  idType,
-                                  schemaImports,
-                                  typeReplacements)
-    generator.code // Yes... Files are written as a side effect
+    parsedSchemasOpt.getOrElse(Map.empty).foreach {
+      case (schemaName, tables) =>
+        val generator = new Generator(uri,
+                                      pkg,
+                                      dbModel,
+                                      schemaName,
+                                      outputPath,
+                                      manualForeignKeys,
+                                      schemaBaseClass,
+                                      idType,
+                                      schemaImports,
+                                      typeReplacements)
+        generator.code // Yes... Files are written as a side effect
+    }
+
     parsedSchemasOpt
       .getOrElse(Map())
       .keys
@@ -70,7 +75,9 @@ class PackageNameGenerator(pkg: String, dbModel: Model)
 class ImportGenerator(dbModel: Model, schemaImports: List[String])
     extends SourceCodeGenerator(dbModel) {
 
-  val baseImports: String = schemaImports.map("import " + _).mkString("\n") + "\n"
+  val baseImports: String = schemaImports
+      .map("import " + _)
+      .mkString("\n") + "\n"
 
   val hlistImports: String =
     """|import slick.collection.heterogeneous._
@@ -91,6 +98,7 @@ class ImportGenerator(dbModel: Model, schemaImports: List[String])
 class Generator(uri: URI,
                 pkg: String,
                 dbModel: Model,
+                schemaName: String,
                 outputPath: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
@@ -114,40 +122,36 @@ class Generator(uri: URI,
 
   override def code: String = {
 
-    val sortedSchemaTables: List[(String, Seq[TableDef])] = tables
-      .groupBy(t => t.model.name.schema.getOrElse("`public`"))
-      .toList
-      .sortBy(_._1)
+    val schemaTables =
+      tables.filter(_.model.name.schema.getOrElse("`public`") == schemaName)
 
-    val schemata: String = sortedSchemaTables.map {
-      case (schemaName, tableDefs) =>
-        val tableCode = tableDefs
-          .sortBy(_.model.name.table)
-          .map(_.code.mkString("\n"))
-          .mkString("\n\n")
+    val tableCode = schemaTables
+      .sortBy(_.model.name.table)
+      .map(_.code.mkString("\n"))
+      .mkString("\n\n")
 
-        val ddlCode =
-          (if (ddlEnabled) {
-             "\n/** DDL for all tables. Call .create to execute. */" +
-               (
-                 if (tableDefs.length > 5)
-                   "\nlazy val schema: profile.SchemaDescription = Array(" + tableDefs
-                     .map(_.TableValue.name + ".schema")
-                     .mkString(", ") + ").reduceLeft(_ ++ _)"
-                 else if (tableDefs.nonEmpty)
-                   "\nlazy val schema: profile.SchemaDescription = " + tableDefs
-                     .map(_.TableValue.name + ".schema")
-                     .mkString(" ++ ")
-                 else
-                   "\nlazy val schema: profile.SchemaDescription = profile.DDL(Nil, Nil)"
-               ) +
-               "\n\n"
-           } else "")
+    val ddlCode =
+      (if (ddlEnabled) {
+         "\n/** DDL for all tables. Call .create to execute. */" +
+           (
+             if (schemaTables.length > 5)
+               "\nlazy val schema: profile.SchemaDescription = Array(" + schemaTables
+                 .map(_.TableValue.name + ".schema")
+                 .mkString(", ") + ").reduceLeft(_ ++ _)"
+             else if (schemaTables.nonEmpty)
+               "\nlazy val schema: profile.SchemaDescription = " + schemaTables
+                 .map(_.TableValue.name + ".schema")
+                 .mkString(" ++ ")
+             else
+               "\nlazy val schema: profile.SchemaDescription = profile.DDL(Nil, Nil)"
+           ) +
+           "\n\n"
+       } else "")
 
-        val generatedSchema = s"""
+    val generatedSchema = s"""
           |object ${schemaName} extends {
           |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
-                                   .getFragment()}").driver
+                               .getFragment()}").driver
           |} with $schemaBaseClass {
           |  import profile.api._
           |  ${tableCode}
@@ -155,24 +159,20 @@ class Generator(uri: URI,
           |}
           |// scalastyle:on""".stripMargin
 
-        writeStringToFile(
-          packageName + allImports + generatedSchema,
-          outputPath,
-          pkg,
-          s"${schemaName}.scala"
-        )
+    writeStringToFile( // TODO: use writeToFile
+                      packageName + allImports + generatedSchema,
+                      outputPath,
+                      pkg,
+                      s"${schemaName}.scala")
 
-        if (idType.isEmpty) {
-          writeStringToFile(packageName + defaultIdImplementation,
-                            outputPath,
-                            pkg,
-                            "Id.scala")
-        }
+    if (idType.isEmpty) { // TODO move out
+      writeStringToFile(packageName + defaultIdImplementation,
+                        outputPath,
+                        pkg,
+                        "Id.scala")
+    }
 
-        generatedSchema
-    }.mkString("\n\n")
-
-    allImports + schemata
+    allImports + generatedSchema
   }
 
   override def Table = new Table(_) { table =>
@@ -280,9 +280,7 @@ class Generator(uri: URI,
         s"""lazy val $fkName = foreignKey("$dbName", $fkColumns, $qualifiedName)(r => $pkColumns, onUpdate=$onUpdate, onDelete=$onDelete)"""
       }
     }
-
   }
-
 }
 
 object SchemaParser {
