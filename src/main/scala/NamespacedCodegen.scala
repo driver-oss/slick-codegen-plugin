@@ -23,7 +23,7 @@ object Generator {
           schemaNames: Option[List[String]],
           outputPath: String,
           manualForeignKeys: Map[(String, String), (String, String)],
-          schemaBaseClass: String,
+          schemaBaseClass: String, // TODO: Keep it optional?
           idType: Option[String],
           schemaImports: List[String],
           typeReplacements: Map[String, String]) = {
@@ -42,16 +42,28 @@ object Generator {
 
     parsedSchemasOpt.getOrElse(Map.empty).foreach {
       case (schemaName, tables) =>
-        val generator = new Generator(uri,
-                                      pkg,
-                                      dbModel,
-                                      schemaName,
-                                      outputPath,
-                                      manualForeignKeys,
-                                      schemaBaseClass,
-                                      idType,
-                                      schemaImports,
-                                      typeReplacements)
+        val profile =
+          s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
+            .getFragment()}").driver"""
+
+        val generator = new Generator(
+          pkg, // still necessary
+          dbModel,
+          schemaName, // still necessary?
+          manualForeignKeys,
+          schemaBaseClass, //still necessary if we use parentType below?
+          idType,
+          schemaImports,
+          typeReplacements)
+        generator.writeStringToFile(
+          content = generator.packageCode(profile = profile,
+                                          pkg = pkg,
+                                          container = schemaName,
+                                          parentType = Some(schemaBaseClass)),
+          folder = outputPath,
+          pkg = pkg,
+          fileName = s"${schemaName}.scala")
+
         generator.code // Yes... Files are written as a side effect
     }
 
@@ -93,13 +105,12 @@ class ImportGenerator(dbModel: Model, schemaImports: List[String])
 
   override def code: String =
     baseImports + hlistImports + plainSqlMapperImports
+  // remove the latter two when go back to inherriting `def code`
 }
 
-class Generator(uri: URI,
-                pkg: String,
+class Generator(pkg: String,
                 dbModel: Model,
                 schemaName: String,
-                outputPath: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
                 idType: Option[String],
@@ -124,6 +135,7 @@ class Generator(uri: URI,
 
     val schemaTables =
       tables.filter(_.model.name.schema.getOrElse("`public`") == schemaName)
+    // TODO override `tables` instead of `code`
 
     val tableCode = schemaTables
       .sortBy(_.model.name.table)
@@ -148,31 +160,28 @@ class Generator(uri: URI,
            "\n\n"
        } else "")
 
-    val generatedSchema = s"""
-          |object ${schemaName} extends {
-          |  val profile = slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
-                               .getFragment()}").driver
-          |} with $schemaBaseClass {
-          |  import profile.api._
-          |  ${tableCode}
-          |  ${ddlCode}
-          |}
-          |// scalastyle:on""".stripMargin
-
-    writeStringToFile( // TODO: use writeToFile
-                      packageName + allImports + generatedSchema,
-                      outputPath,
-                      pkg,
-                      s"${schemaName}.scala")
-
     if (idType.isEmpty) { // TODO move out
       writeStringToFile(packageName + defaultIdImplementation,
-                        outputPath,
+                        "", //outputPath,
                         pkg,
                         "Id.scala")
     }
 
-    allImports + generatedSchema
+    tableCode + "\n  " + ddlCode
+  }
+
+  override def packageCode(profile: String,
+                           pkg: String,
+                           container: String,
+                           parentType: Option[String]): String = {
+    packageName + allImports + s"""|object ${container} extends {
+                                   |  val profile = $profile
+                                   |} with $schemaBaseClass {
+                                   |  import profile.api._
+                                   |  ${code}
+                                   |}
+                                   |// scalastyle:on""".stripMargin
+    // TODO: use parentType
   }
 
   override def Table = new Table(_) { table =>
