@@ -86,8 +86,7 @@ object Generator {
 class PackageNameGenerator(pkg: String, dbModel: Model)
     extends SourceCodeGenerator(dbModel) {
   override def code: String =
-    s"""|// scalastyle:off
-        |package ${pkg}
+    s"""|package ${pkg}
         |
         |""".stripMargin
 }
@@ -132,8 +131,7 @@ class Generator(pkg: String,
                                    |} with $schemaBaseClass {
                                    |  import profile.api._
                                    |  ${code}
-                                   |}
-                                   |// scalastyle:on""".stripMargin
+                                   |}""".stripMargin
     // TODO: use parentType
   }
 
