@@ -32,39 +32,47 @@ object Generator {
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
       schemaNames.map(SchemaParser.parse)
 
-    val dbModel: Model = try {
-      Await.result(
+    try {
+      val dbModel: Model = Await.result(
         dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
         Duration.Inf)
+
+      parsedSchemasOpt.getOrElse(Map.empty).foreach {
+        case (schemaName, tables) =>
+          val profile =
+            s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
+              .getFragment()}").driver"""
+
+          val schemaOnlyModel = Await.result(
+            dc.db.run(
+              SchemaParser.createModel(dc.driver,
+                                       Some(Map(schemaName -> tables)))),
+            Duration.Inf)
+
+          val generator = new Generator(
+            pkg, // still necessary
+            dbModel,
+            schemaName, // still necessary?
+            schemaOnlyModel,
+            manualForeignKeys,
+            schemaBaseClass, //still necessary if we use parentType below?
+            idType,
+            schemaImports,
+            typeReplacements)
+          generator.writeStringToFile(content = generator.packageCode(
+                                        profile = profile,
+                                        pkg = pkg,
+                                        container = schemaName,
+                                        parentType = Some(schemaBaseClass)),
+                                      folder = outputPath,
+                                      pkg = pkg,
+                                      fileName = s"${schemaName}.scala")
+
+          generator.code // Yes... Files are written as a side effect
+      }
+
     } finally {
       dc.db.close()
-    }
-
-    parsedSchemasOpt.getOrElse(Map.empty).foreach {
-      case (schemaName, tables) =>
-        val profile =
-          s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
-            .getFragment()}").driver"""
-
-        val generator = new Generator(
-          pkg, // still necessary
-          dbModel,
-          schemaName, // still necessary?
-          manualForeignKeys,
-          schemaBaseClass, //still necessary if we use parentType below?
-          idType,
-          schemaImports,
-          typeReplacements)
-        generator.writeStringToFile(
-          content = generator.packageCode(profile = profile,
-                                          pkg = pkg,
-                                          container = schemaName,
-                                          parentType = Some(schemaBaseClass)),
-          folder = outputPath,
-          pkg = pkg,
-          fileName = s"${schemaName}.scala")
-
-        generator.code // Yes... Files are written as a side effect
     }
 
     parsedSchemasOpt
@@ -109,18 +117,19 @@ class ImportGenerator(dbModel: Model, schemaImports: List[String])
 }
 
 class Generator(pkg: String,
-                dbModel: Model,
+                fullDatabaseModel: Model,
                 schemaName: String,
+                schemaOnlyModel: Model,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 schemaBaseClass: String,
                 idType: Option[String],
                 schemaImports: List[String],
                 typeReplacements: Map[String, String])
-    extends SourceCodeGenerator(dbModel)
+    extends SourceCodeGenerator(schemaOnlyModel)
     with OutputHelpers {
 
-  val packageName = new PackageNameGenerator(pkg, dbModel).code
-  val allImports: String = new ImportGenerator(dbModel, schemaImports).code
+  val packageName = new PackageNameGenerator(pkg, fullDatabaseModel).code
+  val allImports: String = new ImportGenerator(fullDatabaseModel, schemaImports).code
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
@@ -131,10 +140,12 @@ class Generator(pkg: String,
        |}
        |""".stripMargin
 
-  override def tables = {
-    super.tables
-      .filter(_.model.name.schema.getOrElse("`public`") == schemaName)
-  }
+  // override def tables = {
+  //   dbModel.tables.map(Table).sortBy(_.TableClass.rawName.toLowerCase)
+  //     .filter(_.model.name.schema.getOrElse("`public`") == schemaName)
+  // }
+  // Can't override with final
+  // Can't reference super with lazy
 
   override def code: String = {
     val tableCode = tables
@@ -227,9 +238,9 @@ class Generator(pkg: String,
     }
 
     override def Column = new Column(_) { column =>
-
+      // use fullDatabasemodel model here for cross-schema foreign keys
       val manualReferences =
-        SchemaParser.references(dbModel, manualForeignKeys)
+        SchemaParser.references(fullDatabaseModel, manualForeignKeys)
 
       // work out the destination of the foreign key
       def derefColumn(table: sModel.Table,
@@ -239,7 +250,7 @@ class Generator(pkg: String,
             .filter(tableFk => tableFk.referencingColumns.forall(_ == column))
             .filter(columnFk => columnFk.referencedColumns.length == 1)
             .flatMap(_.referencedColumns.map(c =>
-              (dbModel.tablesByName(c.table), c)))
+              (fullDatabaseModel.tablesByName(c.table), c)))
         assert(referencedColumn.distinct.length <= 1, referencedColumn)
 
         referencedColumn.headOption
