@@ -252,18 +252,26 @@ object SchemaParser {
   def createModel(
       jdbcProfile: JdbcProfile,
       mappedSchemasOpt: Option[Map[String, List[String]]]): DBIO[Model] = {
-    val allTables: DBIO[Vector[MTable]] = MTable.getTables
+    import slick.jdbc.meta.MQName
 
-    val filteredTables = mappedSchemasOpt.map(
-      mappedSchemas =>
-        allTables.map(
-          (tables: Vector[MTable]) =>
-            tables.filter(
-              table =>
-                table.name.schema
-                  .flatMap(mappedSchemas.get)
-                  .exists(ts => ts.isEmpty || ts.contains(table.name.name)))))
+    val filteredTables = mappedSchemasOpt.map { mappedSchemas =>
+      MTable.getTables.map { (tables: Vector[MTable]) =>
+        mappedSchemas.flatMap {
+          case (schemaName, tableNames) =>
+            tableNames.map(
+              tableName =>
+                tables
+                  .find(table =>
+                    table.name match {
+                      case MQName(_, Some(`schemaName`), `tableName`) => true
+                      case _ => false
+                  })
+                  .getOrElse(throw new IllegalArgumentException(
+                    s"$schemaName.$tableName does not exist in the connected database.")))
+        }.toList
+      }
+    }
 
-    jdbcProfile.createModel(filteredTables orElse Some(allTables))
+    jdbcProfile.createModel(filteredTables)
   }
 }
