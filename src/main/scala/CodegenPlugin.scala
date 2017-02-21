@@ -7,20 +7,30 @@ object CodegenPlugin extends AutoPlugin {
   type TableColumn = (String, String)
 
   object autoImport {
-    lazy val codegenURI =
-      SettingKey[String]("codegen-uri", "uri for the database configuration")
-    lazy val codegenPackage = SettingKey[String](
-      "codegen-package",
-      "package in which to place generated code")
-    lazy val codegenOutputPath = SettingKey[String](
-      "codegen-output-path",
-      "directory to with the generated code will be written")
-    lazy val codegenSchemaWhitelist = SettingKey[List[String]](
-      "codegen-schema-whitelist",
-      "schemas and tables to process")
-    lazy val codegenForeignKeys = SettingKey[Map[TableColumn, TableColumn]](
-      "codegen-foreign-keys",
-      "foreign key references to data models add manually")
+
+    /**
+      * Parameters for a run of codegen on a single database
+      * configuration. This is useful when you want to run the same code
+      * generator on multiple databases:
+      *
+      * @param databaseUri uri for the database configuration
+      * @param outputPackage package in which to place generated code
+      * @param outputPath directory to which the code will be written
+      * @param codegenSchemaWhitelist schemas and tables to process
+      * @param foreignKeys foreign key references to data models add manually
+      */
+    case class CodegenDatabase(
+        databaseURI: String,
+        outputPackage: String,
+        outputPath: String,
+        schemaWhitelist: List[String] = List.empty,
+        foreignKeys: Map[TableColumn, TableColumn] = Map.empty
+    )
+
+    lazy val codegenDatabaseConfigs = SettingKey[List[CodegenDatabase]](
+      "codegen-database-configs",
+      "configurations for each database and its generated code")
+
     lazy val codegenSchemaBaseClassParts = SettingKey[List[String]](
       "codegen-schema-base-class-parts",
       "parts inherited by each generated schema object")
@@ -39,37 +49,37 @@ object CodegenPlugin extends AutoPlugin {
 
     lazy val slickCodeGenTask =
       TaskKey[Unit]("gen-tables", "generate the table definitions")
-
   }
 
   import autoImport._
 
   override lazy val projectSettings = Seq(
-    codegenSchemaWhitelist := List.empty,
-    codegenForeignKeys := Map.empty,
     codegenSchemaBaseClassParts := List.empty,
     codegenIdType := Option.empty,
     codegenSchemaImports := List.empty,
     codegenTypeReplacements := Map.empty,
     slickCodeGenTask := Def.taskDyn {
       Def.task {
-        Generator.run(
-          new java.net.URI(codegenURI.value),
-          codegenPackage.value,
-          Some(codegenSchemaWhitelist.value).filter(_.nonEmpty),
-          codegenOutputPath.value,
-          codegenForeignKeys.value,
-          (if (codegenIdType.value.isEmpty)
-             codegenSchemaBaseClassParts.value :+ "DefaultIdTypeMapper"
-           else
-             codegenSchemaBaseClassParts.value) match {
-            case Nil => "AnyRef"
-            case parts => parts.mkString(" with ")
-          },
-          codegenIdType.value,
-          codegenSchemaImports.value,
-          codegenTypeReplacements.value
-        )
+        codegenDatabaseConfigs.value.foreach {
+          config =>
+            Generator.run(
+              new java.net.URI(config.databaseURI),
+              config.outputPackage,
+              Some(config.schemaWhitelist).filter(_.nonEmpty),
+              config.outputPath,
+              config.foreignKeys,
+              (if (codegenIdType.value.isEmpty)
+                 codegenSchemaBaseClassParts.value :+ "DefaultIdTypeMapper"
+               else
+                 codegenSchemaBaseClassParts.value) match {
+                case Nil => "AnyRef"
+                case parts => parts.mkString(" with ")
+              },
+              codegenIdType.value,
+              codegenSchemaImports.value,
+              codegenTypeReplacements.value
+            )
+        }
       }
     }.value
   )
