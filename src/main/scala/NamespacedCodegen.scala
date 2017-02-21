@@ -64,6 +64,8 @@ object Generator {
             folder = outputPath,
             pkg = pkg,
             fileName = s"${schemaName}.scala")
+          // TODO: Use generator.writeToFile, after figuring out `parentType`
+          // parentType in scope used here is defaulted to None and needs to be overriden
       }
     } finally {
       dc.db.close()
