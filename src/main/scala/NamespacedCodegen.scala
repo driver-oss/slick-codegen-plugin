@@ -102,7 +102,7 @@ class Generator(pkg: String,
        |}
        |""".stripMargin
 
-  val filteredCode = code.lines.drop(1).mkString
+  override def code = super.code.lines.drop(1).mkString("\n")
   // Drops needless import: `"import slick.model.ForeignKeyAction\n"`.
   // Alias to ForeignKeyAction is in profile.api
   // TODO: fix upstream
@@ -124,9 +124,8 @@ class Generator(pkg: String,
         |/** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
         |trait $traitName${parentType.fold("")(" extends " + _)} {
         |  import profile.api._
-        |  ${indent(filteredCode)}
+        |  ${indent(code)}
         |}""".stripMargin.trim()
-    // TODO: default to upstream packageCode after filteredCode is fixed
   }
 
   override def Table = new Table(_) { table =>
