@@ -100,6 +100,11 @@ class Generator(pkg: String,
        |}
        |""".stripMargin
 
+  val filteredCode = code.lines.drop(1).mkString
+  // Drops needless import: `"import slick.model.ForeignKeyAction\n"`.
+  // Alias to ForeignKeyAction is in profile.api
+  // TODO: fix upstream
+
   override def packageCode(profile: String,
                            pkg: String,
                            container: String,
@@ -110,7 +115,7 @@ class Generator(pkg: String,
         |  val profile = $profile
         |} with ${parentType.getOrElse("AnyRef")} {
         |  import profile.api._
-        |  ${code}
+        |  ${filteredCode}
         |}""".stripMargin
   }
 
