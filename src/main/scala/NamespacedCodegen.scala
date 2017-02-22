@@ -6,7 +6,6 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import slick.backend.DatabaseConfig
 import slick.codegen.{
-  OutputHelpers,
   SourceCodeGenerator,
   StringGeneratorHelpers
 }
@@ -70,12 +69,6 @@ object Generator {
 
 }
 
-class ImportGenerator(dbModel: Model, schemaImports: List[String])
-    extends SourceCodeGenerator(dbModel) {
-  override def code: String =
-    schemaImports.map("import " + _).mkString("\n") + "\n"
-}
-
 class Generator(pkg: String,
                 fullDatabaseModel: Model,
                 schemaOnlyModel: Model,
@@ -87,8 +80,7 @@ class Generator(pkg: String,
     extends SourceCodeGenerator(schemaOnlyModel)
     with OutputHelpers {
 
-  val allImports: String =
-    new ImportGenerator(fullDatabaseModel, schemaImports).code
+  override val imports = schemaImports.map("import " + _).mkString("\n")
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
@@ -103,27 +95,6 @@ class Generator(pkg: String,
   // Drops needless import: `"import slick.model.ForeignKeyAction\n"`.
   // Alias to ForeignKeyAction is in profile.api
   // TODO: fix upstream
-
-  override def packageCode(profile: String,
-                           pkg: String,
-                           container: String,
-                           parentType: Option[String]): String = {
-    val traitName = container.capitalize + "SchemaDef"
-    s"""|package $pkg
-        |$allImports
-        |// AUTO-GENERATED Slick data model
-        |
-        |/** Stand-alone Slick data model for immediate use */
-        |object $container extends {
-        |  val profile = $profile
-        |} with $traitName
-        |
-        |/** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
-        |trait $traitName${parentType.fold("")(" extends " + _)} {
-        |  import profile.api._
-        |  ${indent(code)}
-        |}""".stripMargin.trim()
-  }
 
   override def Table = new Table(_) { table =>
 
