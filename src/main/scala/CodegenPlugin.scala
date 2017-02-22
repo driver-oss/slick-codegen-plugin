@@ -46,6 +46,10 @@ object CodegenPlugin extends AutoPlugin {
       "codegen-type-replacements",
       "A map of types to find and replace"
     )
+    lazy val codegenHeader = SettingKey[String](
+      "codegen-header",
+      "Comments that go at the top of generated files; notices and tooling directives."
+    )
 
     lazy val slickCodeGenTask =
       TaskKey[Unit]("gen-tables", "generate the table definitions")
@@ -58,6 +62,7 @@ object CodegenPlugin extends AutoPlugin {
     codegenIdType := Option.empty,
     codegenSchemaImports := List.empty,
     codegenTypeReplacements := Map.empty,
+    codegenHeader := "AUTO-GENERATED Slick data model",
     slickCodeGenTask := Def.taskDyn {
       Def.task {
         codegenDatabaseConfigs.value.foreach {
@@ -77,6 +82,7 @@ object CodegenPlugin extends AutoPlugin {
                 Some(parts).filter(_.nonEmpty).map(_.mkString(" with "))
               },
               codegenIdType.value,
+              codegenHeader.value,
               codegenSchemaImports.value,
               codegenTypeReplacements.value
             )

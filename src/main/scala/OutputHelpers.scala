@@ -9,10 +9,10 @@ trait OutputHelpers extends slick.codegen.OutputHelpers {
                            container: String,
                            parentType: Option[String]): String = {
     val traitName = container.capitalize + "SchemaDef"
-    s"""|package $pkg
-        |$imports
+    s"""|${headerComment.trim().lines.map("// " + _).mkString("\n")}
+        |package $pkg
         |
-        |// AUTO-GENERATED Slick data model
+        |$imports
         |
         |/** Stand-alone Slick data model for immediate use */
         |object $container extends {

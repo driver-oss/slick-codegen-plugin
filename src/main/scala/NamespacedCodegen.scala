@@ -24,6 +24,7 @@ object Generator {
           manualForeignKeys: Map[(String, String), (String, String)],
           parentType: Option[String],
           idType: Option[String],
+          header: String,
           schemaImports: List[String],
           typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
@@ -54,6 +55,7 @@ object Generator {
                                         manualForeignKeys,
                                         parentType,
                                         idType,
+                                        header,
                                         schemaImports,
                                         typeReplacements)
           generator.writeToFile(profile = profile,
@@ -75,6 +77,7 @@ class Generator(pkg: String,
                 manualForeignKeys: Map[(String, String), (String, String)],
                 override val parentType: Option[String],
                 idType: Option[String],
+                override val headerComment: String,
                 schemaImports: List[String],
                 typeReplacements: Map[String, String])
     extends SourceCodeGenerator(schemaOnlyModel)
