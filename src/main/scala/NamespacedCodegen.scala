@@ -167,7 +167,11 @@ class Generator(pkg: String,
 
     def EntityTypeRef = new EntityTypeDef {
       override def code: String =
-        (if (classEnabled) "final " else "") + super.code
+        // Wartremover wants `final`
+        // But can't have the final case class inside the trait
+        // TODO: Fix by putting case classes in package or object
+        // TODO: Upstream default should be false.
+        (if (classEnabled) "sealed " else "") + super.code
     }
 
     override def Column = new Column(_) { column =>
