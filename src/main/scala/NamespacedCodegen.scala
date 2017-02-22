@@ -107,7 +107,7 @@ class Generator(pkg: String,
 
     def TableClassRef = new TableClass() {
       // We disable the option mapping, as it is a bit more complex to support and we don't appear to need it
-      override def option = "" // if(hlistEnabled) "" else super.option
+      override def optionEnabled = false
     }
 
     // use hlists all the time
