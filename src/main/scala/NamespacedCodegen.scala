@@ -53,19 +53,15 @@ object Generator {
                                         dbModel,
                                         schemaOnlyModel,
                                         manualForeignKeys,
+                                        parentType,
                                         idType,
                                         schemaImports,
                                         typeReplacements)
-          generator.writeStringToFile(
-            content = generator.packageCode(profile = profile,
-                                            pkg = pkg,
-                                            container = schemaName,
-                                            parentType = parentType),
-            folder = outputPath,
-            pkg = pkg,
-            fileName = s"${schemaName}.scala")
-          // TODO: Use generator.writeToFile, after figuring out `parentType`
-          // parentType in scope used here is defaulted to None and needs to be overriden
+          generator.writeToFile(profile = profile,
+                                folder = outputPath,
+                                pkg = pkg,
+                                container = schemaName,
+                                fileName = s"${schemaName}.scala")
       }
     } finally {
       dc.db.close()
@@ -84,6 +80,7 @@ class Generator(pkg: String,
                 fullDatabaseModel: Model,
                 schemaOnlyModel: Model,
                 manualForeignKeys: Map[(String, String), (String, String)],
+                override val parentType: Option[String],
                 idType: Option[String],
                 schemaImports: List[String],
                 typeReplacements: Map[String, String])
