@@ -101,11 +101,7 @@ class Generator(pkg: String,
 
   override def Table = new Table(_) { table =>
 
-    // need this in order to use our own TableClass generator
-    override def definitions =
-      Seq[Def](EntityTypeRef, PlainSqlMapper, TableClassRef, TableValue)
-
-    def TableClassRef = new TableClass() {
+    override def TableClass = new TableClass() {
       // We disable the option mapping, as it is a bit more complex to support and we don't appear to need it
       override def optionEnabled = false
     }
@@ -136,7 +132,7 @@ class Generator(pkg: String,
           .map("a." + _.name)
           .mkString("::") + ":: HNil)"
 
-    def EntityTypeRef = new EntityTypeDef {
+    override def EntityType = new EntityTypeDef {
       override def code: String =
         // Wartremover wants `final`
         // But can't have the final case class inside the trait
