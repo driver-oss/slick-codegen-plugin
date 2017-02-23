@@ -15,7 +15,7 @@ trait OutputHelpers extends slick.codegen.OutputHelpers {
         |$imports
         |
         |/** Stand-alone Slick data model for immediate use */
-        |object $container extends {
+        |package object $container extends {
         |  val profile = $profile
         |} with $traitName
         |

@@ -49,7 +49,23 @@ object Generator {
                                        Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
-          val generator = new Generator(pkg,
+          val tableGenerator = new TableGenerator(pkg,
+                                        dbModel,
+                                        schemaOnlyModel,
+                                        manualForeignKeys,
+                                        parentType,
+                                        idType,
+                                        header,
+                                        schemaImports,
+            typeReplacements,
+          schemaName)
+          tableGenerator.writeToFile(profile = profile,
+                                folder = outputPath,
+                                pkg = pkg,
+                                container = schemaName,
+                                fileName = s"${schemaName}.scala")
+
+          val rowGenerator = new RowGenerator(pkg,
                                         dbModel,
                                         schemaOnlyModel,
                                         manualForeignKeys,
@@ -58,11 +74,11 @@ object Generator {
                                         header,
                                         schemaImports,
                                         typeReplacements)
-          generator.writeToFile(profile = profile,
-                                folder = outputPath,
-                                pkg = pkg,
-                                container = schemaName,
-                                fileName = s"${schemaName}.scala")
+          rowGenerator.writeToFile(
+            schemaName = schemaName,
+            folder = outputPath,
+            pkg = pkg,
+            fileName = s"${schemaName.capitalize}Rows.scala")
       }
     } finally {
       dc.db.close()
@@ -71,7 +87,7 @@ object Generator {
 
 }
 
-class Generator(pkg: String,
+abstract class Generator(pkg: String,
                 fullDatabaseModel: Model,
                 schemaOnlyModel: Model,
                 manualForeignKeys: Map[(String, String), (String, String)],
@@ -99,7 +115,9 @@ class Generator(pkg: String,
   // Alias to ForeignKeyAction is in profile.api
   // TODO: fix upstream
 
-  override def Table = new Table(_) { table =>
+  override def Table = new TableO(_)
+  
+  class TableO(model: sModel.Table) extends this.Table(model) { table =>
 
     override def TableClass = new TableClass() {
       // We disable the option mapping, as it is a bit more complex to support and we don't appear to need it
@@ -138,10 +156,10 @@ class Generator(pkg: String,
         // But can't have the final case class inside the trait
         // TODO: Fix by putting case classes in package or object
         // TODO: Upstream default should be false.
-        (if (classEnabled) "sealed " else "") + super.code
+        (if (classEnabled) "final " else "") + super.code
     }
 
-    override def Column = new Column(_) { column =>
+    override def Column = new this.Column(_) { column =>
       // use fullDatabasemodel model here for cross-schema foreign keys
       val manualReferences =
         SchemaParser.references(fullDatabaseModel, manualForeignKeys)
@@ -258,5 +276,84 @@ object SchemaParser {
     }
 
     jdbcProfile.createModel(filteredTables)
+  }
+}
+
+class RowGenerator(pkg: String,
+                fullDatabaseModel: Model,
+                schemaOnlyModel: Model,
+                manualForeignKeys: Map[(String, String), (String, String)],
+                override val parentType: Option[String],
+                idType: Option[String],
+                override val headerComment: String,
+                schemaImports: List[String],
+  typeReplacements: Map[String, String])
+    extends Generator(pkg,
+      fullDatabaseModel,
+      schemaOnlyModel,
+      manualForeignKeys,
+      parentType,
+      idType,
+      headerComment,
+      schemaImports,
+      typeReplacements) {
+
+  override def Table = new TableO(_) {
+    //override def Column = new IdColumn(_){ }
+    override def code = Seq[Def](EntityType).map(_.docWithCode)
+  }
+
+  override def code = tables.map(_.code.mkString("\n")).mkString("\n\n")
+
+  def writeToFile(schemaName: String, folder: String, pkg: String, fileName: String) = {
+    writeStringToFile(packageCode(pkg, schemaName), folder = folder, pkg = pkg, fileName = fileName)
+  }
+
+  override val imports = schemaImports.map("import " + _).mkString("\n")
+
+  def packageCode(pkg: String, schemaName: String) = {
+    s"""|package $pkg
+        |package $schemaName
+        |
+        |$imports
+        |
+        |$code
+        |""".stripMargin.trim()
+  }
+
+  // disable helpers for Table schema generators
+  //override def packageCode(profile: String, pkg: String, container: String, parentType: Option[String]) = ???
+  //override def writeToFile(profile: String, folder: String, pkg: String, container: String, fileName: String) = ???
+}
+
+class TableGenerator(pkg: String,
+                fullDatabaseModel: Model,
+                schemaOnlyModel: Model,
+                manualForeignKeys: Map[(String, String), (String, String)],
+                override val parentType: Option[String],
+                idType: Option[String],
+                override val headerComment: String,
+                schemaImports: List[String],
+  typeReplacements: Map[String, String],
+  schemaName: String
+)
+    extends Generator(pkg,
+      fullDatabaseModel,
+      schemaOnlyModel,
+      manualForeignKeys,
+      parentType,
+      idType,
+      headerComment,
+      schemaImports,
+      typeReplacements) {
+
+  override def Table = new TableO(_) {
+    override def EntityType = new EntityType {
+      override def enabled = false
+    }
+    override def TableClass = new TableClass {
+      override def elementType = s"$schemaName.${super.elementType}"
+      override def optionEnabled = false
+    }
   }
 }
