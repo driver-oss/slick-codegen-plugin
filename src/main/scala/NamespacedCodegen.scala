@@ -5,10 +5,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import slick.backend.DatabaseConfig
-import slick.codegen.{
-  SourceCodeGenerator,
-  StringGeneratorHelpers
-}
+import slick.codegen.{SourceCodeGenerator, StringGeneratorHelpers}
 import slick.dbio.DBIO
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
@@ -50,35 +47,35 @@ object Generator {
             Duration.Inf)
 
           val tableGenerator = new TableGenerator(pkg,
-                                        dbModel,
-                                        schemaOnlyModel,
-                                        manualForeignKeys,
-                                        parentType,
-                                        idType,
-                                        header,
-                                        schemaImports,
-            typeReplacements,
-          schemaName)
+                                                  dbModel,
+                                                  schemaOnlyModel,
+                                                  manualForeignKeys,
+                                                  parentType,
+                                                  idType,
+                                                  header,
+                                                  schemaImports,
+                                                  typeReplacements,
+                                                  schemaName)
           tableGenerator.writeToFile(profile = profile,
-                                folder = outputPath,
-                                pkg = pkg,
-                                container = schemaName,
-                                fileName = s"${schemaName}.scala")
+                                     folder = outputPath,
+                                     pkg = pkg,
+                                     container = schemaName,
+                                     fileName = s"${schemaName}.scala")
 
           val rowGenerator = new RowGenerator(pkg,
-                                        dbModel,
-                                        schemaOnlyModel,
-                                        manualForeignKeys,
-                                        parentType,
-                                        idType,
-                                        header,
-                                        schemaImports,
-                                        typeReplacements)
-          rowGenerator.writeToFile(
-            schemaName = schemaName,
-            folder = outputPath,
-            pkg = pkg,
-            fileName = s"${schemaName.capitalize}Rows.scala")
+                                              dbModel,
+                                              schemaOnlyModel,
+                                              manualForeignKeys,
+                                              parentType,
+                                              idType,
+                                              header,
+                                              schemaImports,
+                                              typeReplacements)
+          rowGenerator.writeToFile(schemaName = schemaName,
+                                   folder = outputPath,
+                                   pkg = pkg,
+                                   fileName =
+                                     s"${schemaName.capitalize}Rows.scala")
       }
     } finally {
       dc.db.close()
@@ -87,15 +84,16 @@ object Generator {
 
 }
 
-abstract class Generator(pkg: String,
-                fullDatabaseModel: Model,
-                schemaOnlyModel: Model,
-                manualForeignKeys: Map[(String, String), (String, String)],
-                override val parentType: Option[String],
-                idType: Option[String],
-                override val headerComment: String,
-                schemaImports: List[String],
-                typeReplacements: Map[String, String])
+abstract class Generator(
+    pkg: String,
+    fullDatabaseModel: Model,
+    schemaOnlyModel: Model,
+    manualForeignKeys: Map[(String, String), (String, String)],
+    override val parentType: Option[String],
+    idType: Option[String],
+    override val headerComment: String,
+    schemaImports: List[String],
+    typeReplacements: Map[String, String])
     extends SourceCodeGenerator(schemaOnlyModel)
     with OutputHelpers {
 
@@ -116,7 +114,7 @@ abstract class Generator(pkg: String,
   // TODO: fix upstream
 
   override def Table = new TableO(_)
-  
+
   class TableO(model: sModel.Table) extends this.Table(model) { table =>
 
     override def TableClass = new TableClass() {
@@ -280,23 +278,23 @@ object SchemaParser {
 }
 
 class RowGenerator(pkg: String,
-                fullDatabaseModel: Model,
-                schemaOnlyModel: Model,
-                manualForeignKeys: Map[(String, String), (String, String)],
-                override val parentType: Option[String],
-                idType: Option[String],
-                override val headerComment: String,
-                schemaImports: List[String],
-  typeReplacements: Map[String, String])
+                   fullDatabaseModel: Model,
+                   schemaOnlyModel: Model,
+                   manualForeignKeys: Map[(String, String), (String, String)],
+                   override val parentType: Option[String],
+                   idType: Option[String],
+                   override val headerComment: String,
+                   schemaImports: List[String],
+                   typeReplacements: Map[String, String])
     extends Generator(pkg,
-      fullDatabaseModel,
-      schemaOnlyModel,
-      manualForeignKeys,
-      parentType,
-      idType,
-      headerComment,
-      schemaImports,
-      typeReplacements) {
+                      fullDatabaseModel,
+                      schemaOnlyModel,
+                      manualForeignKeys,
+                      parentType,
+                      idType,
+                      headerComment,
+                      schemaImports,
+                      typeReplacements) {
 
   override def Table = new TableO(_) {
     //override def Column = new IdColumn(_){ }
@@ -305,8 +303,14 @@ class RowGenerator(pkg: String,
 
   override def code = tables.map(_.code.mkString("\n")).mkString("\n\n")
 
-  def writeToFile(schemaName: String, folder: String, pkg: String, fileName: String) = {
-    writeStringToFile(packageCode(pkg, schemaName), folder = folder, pkg = pkg, fileName = fileName)
+  def writeToFile(schemaName: String,
+                  folder: String,
+                  pkg: String,
+                  fileName: String) = {
+    writeStringToFile(packageCode(pkg, schemaName),
+                      folder = folder,
+                      pkg = pkg,
+                      fileName = fileName)
   }
 
   override val imports = schemaImports.map("import " + _).mkString("\n")
@@ -326,26 +330,26 @@ class RowGenerator(pkg: String,
   //override def writeToFile(profile: String, folder: String, pkg: String, container: String, fileName: String) = ???
 }
 
-class TableGenerator(pkg: String,
-                fullDatabaseModel: Model,
-                schemaOnlyModel: Model,
-                manualForeignKeys: Map[(String, String), (String, String)],
-                override val parentType: Option[String],
-                idType: Option[String],
-                override val headerComment: String,
-                schemaImports: List[String],
-  typeReplacements: Map[String, String],
-  schemaName: String
-)
+class TableGenerator(
+    pkg: String,
+    fullDatabaseModel: Model,
+    schemaOnlyModel: Model,
+    manualForeignKeys: Map[(String, String), (String, String)],
+    override val parentType: Option[String],
+    idType: Option[String],
+    override val headerComment: String,
+    schemaImports: List[String],
+    typeReplacements: Map[String, String],
+    schemaName: String)
     extends Generator(pkg,
-      fullDatabaseModel,
-      schemaOnlyModel,
-      manualForeignKeys,
-      parentType,
-      idType,
-      headerComment,
-      schemaImports,
-      typeReplacements) {
+                      fullDatabaseModel,
+                      schemaOnlyModel,
+                      manualForeignKeys,
+                      parentType,
+                      idType,
+                      headerComment,
+                      schemaImports,
+                      typeReplacements) {
 
   override def Table = new TableO(_) {
     override def EntityType = new EntityType {
