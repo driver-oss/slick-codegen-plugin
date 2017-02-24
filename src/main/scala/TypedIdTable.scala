@@ -24,8 +24,8 @@ class TypedIdSourceCodeGenerator(
       .getOrElse((table, column))
   }
 
-  override def Table = new Table(_){ table =>
-    override def Column = new Column(_) { column =>
+  class TypedIdTable(model: m.Table) extends Table(model) { table =>
+    class TypedIdColumn(override val model: m.Column) extends Column(model) { column =>
 
       def tableReferenceName(tableName: m.QualifiedName) = {
         val schemaObjectName = tableName.schema.getOrElse("`public`")

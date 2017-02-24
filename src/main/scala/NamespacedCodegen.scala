@@ -103,7 +103,7 @@ abstract class Generator(
     override val headerComment: String,
     schemaImports: List[String],
     typeReplacements: Map[String, String])
-    extends SourceCodeGenerator(schemaOnlyModel)
+    extends TypedIdSourceCodeGenerator(fullDatabaseModel, idType, manualForeignKeys)
     with OOutputHelpers {
 
   override val imports = schemaImports.map("import " + _).mkString("\n")
@@ -124,7 +124,7 @@ abstract class Generator(
 
   override def Table = new TableO(_)
 
-  class TableO(model: sModel.Table) extends this.Table(model) { table =>
+  class TableO(model: sModel.Table) extends this.TypedIdTable(model) { table =>
 
     override def TableClass = new TableClass() {
       // We disable the option mapping, as it is a bit more complex to support and we don't appear to need it
@@ -166,43 +166,9 @@ abstract class Generator(
         (if (classEnabled) "final " else "") + super.code
     }
 
-    override def Column = new this.Column(_) { column =>
-      // use fullDatabasemodel model here for cross-schema foreign keys
-      val manualReferences =
-        SchemaParser.references(fullDatabaseModel, manualForeignKeys)
-
-      // work out the destination of the foreign key
-      def derefColumn(table: sModel.Table,
-                      column: sModel.Column): (sModel.Table, sModel.Column) = {
-        val referencedColumn: Seq[(sModel.Table, sModel.Column)] =
-          table.foreignKeys
-            .filter(tableFk => tableFk.referencingColumns.forall(_ == column))
-            .filter(columnFk => columnFk.referencedColumns.length == 1)
-            .flatMap(_.referencedColumns.map(c =>
-              (fullDatabaseModel.tablesByName(c.table), c)))
-        assert(referencedColumn.distinct.length <= 1, referencedColumn)
-
-        referencedColumn.headOption
-          .orElse(manualReferences.get((table.name.asString, column.name)))
-          .map((derefColumn _).tupled)
-          .getOrElse((table, column))
-      }
-
-      def tableReferenceName(tableName: QualifiedName) = {
-        val schemaObjectName = tableName.schema.getOrElse("`public`")
-        val rowTypeName = entityName(tableName.table)
-        val idTypeName = idType.getOrElse("Id")
-        s"$idTypeName[$schemaObjectName.$rowTypeName]"
-      }
-
-      // re-write ids other custom types
-      override def rawType: String = {
-        val (referencedTable, referencedColumn) =
-          derefColumn(table.model, column.model)
-        if (referencedColumn.options.contains(
-              slick.ast.ColumnOption.PrimaryKey))
-          tableReferenceName(referencedTable.name)
-        else typeReplacements.getOrElse(model.tpe, model.tpe)
+    override def Column = new TypedIdColumn(_) {
+      override def rawType: String  = {
+        typeReplacements.getOrElse(model.tpe, super.rawType)
       }
     }
 
