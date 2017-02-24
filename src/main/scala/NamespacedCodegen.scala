@@ -81,20 +81,15 @@ object Generator {
 
 }
 
-abstract class Generator(
+class TableSourceCodeGenerator(
     pkg: String,
     fullDatabaseModel: Model,
     schemaOnlyModel: Model,
     manualForeignKeys: Map[(String, String), (String, String)],
-    override val parentType: Option[String],
+    parentType: Option[String],
     idType: Option[String],
-    override val headerComment: String,
-    schemaImports: List[String],
     typeReplacements: Map[String, String])
-    extends TypedIdSourceCodeGenerator(fullDatabaseModel, idType, manualForeignKeys)
-    with OOutputHelpers {
-
-  override val imports = schemaImports.map("import " + _).mkString("\n")
+    extends TypedIdSourceCodeGenerator(fullDatabaseModel, idType, manualForeignKeys) {
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
@@ -110,10 +105,7 @@ abstract class Generator(
   // Alias to ForeignKeyAction is in profile.api
   // TODO: fix upstream
 
-  override def Table = new TableO(_)
-
-  class TableO(model: sModel.Table) extends this.TypedIdTable(model) { table =>
-
+  override def Table = new this.TypedIdTable(_) { table =>
     override def TableClass = new TableClass() {
       // We disable the option mapping, as it is a bit more complex to support and we don't appear to need it
       override def optionEnabled = false
@@ -145,13 +137,8 @@ abstract class Generator(
           .map("a." + _.name)
           .mkString("::") + ":: HNil)"
 
-    override def EntityType = new EntityTypeDef {
-      override def code: String =
-        // Wartremover wants `final`
-        // But can't have the final case class inside the trait
-        // TODO: Fix by putting case classes in package or object
-        // TODO: Upstream default should be false.
-        (if (classEnabled) "final " else "") + super.code
+    override def EntityType = new EntityType {
+      override def enabled = false
     }
 
     override def Column = new TypedIdColumn(_) {
@@ -237,32 +224,5 @@ object SchemaParser {
     }
 
     jdbcProfile.createModel(filteredTables)
-  }
-}
-
-class TableGenerator(
-    pkg: String,
-    fullDatabaseModel: Model,
-    schemaOnlyModel: Model,
-    manualForeignKeys: Map[(String, String), (String, String)],
-    override val parentType: Option[String],
-    idType: Option[String],
-    override val headerComment: String,
-    schemaImports: List[String],
-    typeReplacements: Map[String, String])
-    extends Generator(pkg,
-                      fullDatabaseModel,
-                      schemaOnlyModel,
-                      manualForeignKeys,
-                      parentType,
-                      idType,
-                      headerComment,
-                      schemaImports,
-                      typeReplacements) {
-
-  override def Table = new TableO(_) {
-    override def EntityType = new EntityType {
-      override def enabled = false
-    }
   }
 }
