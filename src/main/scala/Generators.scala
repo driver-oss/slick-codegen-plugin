@@ -8,7 +8,8 @@ class RowSourceCodeGenerator(
     override val schemaName: String,
     fullDatabaseModel: m.Model,
     idType: Option[String],
-    manualForeignKeys: Map[(String, String), (String, String)]
+    manualForeignKeys: Map[(String, String), (String, String)],
+    typeReplacements: Map[String, String]
 ) extends TypedIdSourceCodeGenerator(
       model,
       fullDatabaseModel,
@@ -18,7 +19,13 @@ class RowSourceCodeGenerator(
     with RowOutputHelpers {
 
   override def Table = new TypedIdTable(_) { table =>
-    override def Column = new TypedIdColumn(_) {}
+
+    override def Column = new TypedIdColumn(_) {
+      override def rawType: String = {
+        typeReplacements.getOrElse(model.tpe, super.rawType)
+      }
+    }
+
     override def EntityType = new EntityType {
       override def code: String =
         (if (classEnabled) "final " else "") + super.code

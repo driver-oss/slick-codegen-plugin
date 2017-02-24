@@ -69,7 +69,8 @@ object Generator {
             schemaName = schemaName,
             dbModel,
             idType,
-            manualForeignKeys
+            manualForeignKeys,
+            typeReplacements
           )
 
           val tableGenerator = new TableSourceCodeGenerator(
