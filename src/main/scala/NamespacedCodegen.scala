@@ -26,7 +26,7 @@ object Generator {
                                fileName = s"${camelSchemaName}Tables.scala")
     rowGen.writeRowsToFile(folder: String,
                            pkg: String,
-                           fileName = s"{camelSchemaName}Rows.scala")
+                           fileName = s"${camelSchemaName}Rows.scala")
   }
 
   def run(uri: URI,
