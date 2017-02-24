@@ -20,7 +20,7 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
         |
         |/** Stand-alone Slick data model for immediate use */
         |// TODO: change this to `object tables`
-        |package object $schemaName extends {
+        |object `package` extends {
         |  val profile = $profile
         |} with Tables
         |
