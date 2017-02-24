@@ -2,14 +2,13 @@ import slick.codegen.SourceCodeGenerator
 import slick.{model => m}
 
 class TypedIdSourceCodeGenerator(
-  model: m.Model,
-  idType: Option[String],
-  manualForeignKeys: Map[(String, String), (String, String)]
+    model: m.Model,
+    idType: Option[String],
+    manualForeignKeys: Map[(String, String), (String, String)]
 ) extends SourceCodeGenerator(model) {
   val manualReferences = SchemaParser.references(model, manualForeignKeys)
 
-  def derefColumn(table: m.Table,
-    column: m.Column): (m.Table, m.Column) = {
+  def derefColumn(table: m.Table, column: m.Column): (m.Table, m.Column) = {
     val referencedColumn: Seq[(m.Table, m.Column)] =
       table.foreignKeys
         .filter(tableFk => tableFk.referencingColumns.forall(_ == column))
@@ -25,7 +24,8 @@ class TypedIdSourceCodeGenerator(
   }
 
   class TypedIdTable(model: m.Table) extends Table(model) { table =>
-    class TypedIdColumn(override val model: m.Column) extends Column(model) { column =>
+    class TypedIdColumn(override val model: m.Column) extends Column(model) {
+      column =>
 
       def tableReferenceName(tableName: m.QualifiedName) = {
         val schemaObjectName = tableName.schema.getOrElse("`public`")

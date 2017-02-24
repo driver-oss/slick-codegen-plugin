@@ -2,21 +2,22 @@ import slick.codegen.SourceCodeGenerator
 import slick.{model => m}
 
 class RowSourceCodeGenerator(
-  model: m.Model,
-  override val headerComment: String,
-  override val imports: String,
-  override val schemaName: String,
-  fullDatabaseModel: m.Model,
-  idType: Option[String],
-  manualForeignKeys: Map[(String, String), (String, String)]
+    model: m.Model,
+    override val headerComment: String,
+    override val imports: String,
+    override val schemaName: String,
+    fullDatabaseModel: m.Model,
+    idType: Option[String],
+    manualForeignKeys: Map[(String, String), (String, String)]
 ) extends TypedIdSourceCodeGenerator(
-  fullDatabaseModel,
-  idType,
-  manualForeignKeys
-) with RowOutputHelpers {
+      fullDatabaseModel,
+      idType,
+      manualForeignKeys
+    )
+    with RowOutputHelpers {
 
   override def Table = new TypedIdTable(_) { table =>
-    override def Column = new TypedIdColumn(_) { }
+    override def Column = new TypedIdColumn(_) {}
     override def EntityType = new EntityType {
       override def code: String =
         (if (classEnabled) "final " else "") + super.code
@@ -39,9 +40,10 @@ class TableSourceCodeGenerator(
     parentType: Option[String],
     idType: Option[String],
     typeReplacements: Map[String, String])
-    extends TypedIdSourceCodeGenerator(fullDatabaseModel, idType, manualForeignKeys)
-  with TableOutputHelpers
-{
+    extends TypedIdSourceCodeGenerator(fullDatabaseModel,
+                                       idType,
+                                       manualForeignKeys)
+    with TableOutputHelpers {
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
@@ -94,7 +96,7 @@ class TableSourceCodeGenerator(
     }
 
     override def Column = new TypedIdColumn(_) {
-      override def rawType: String  = {
+      override def rawType: String = {
         typeReplacements.getOrElse(model.tpe, super.rawType)
       }
     }

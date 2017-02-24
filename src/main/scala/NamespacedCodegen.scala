@@ -12,11 +12,21 @@ import slick.model.{Column, Model, Table, QualifiedName}
 
 object Generator {
 
-  def outputSchemaCode(schemaName: String, profile: String, folder: String, pkg: String, tableGen: TableFileGenerator, rowGen: RowFileGenerator): Unit = {
+  def outputSchemaCode(schemaName: String,
+                       profile: String,
+                       folder: String,
+                       pkg: String,
+                       tableGen: TableFileGenerator,
+                       rowGen: RowFileGenerator): Unit = {
     val camelSchemaName = schemaName.split('_').map(_.capitalize).mkString("")
 
-    tableGen.writeTablesToFile(profile: String, folder: String, pkg: String, fileName = s"${camelSchemaName}Tables.scala")
-    rowGen.writeRowsToFile(folder: String, pkg: String, fileName = s"{camelSchemaName}Rows.scala")
+    tableGen.writeTablesToFile(profile: String,
+                               folder: String,
+                               pkg: String,
+                               fileName = s"${camelSchemaName}Tables.scala")
+    rowGen.writeRowsToFile(folder: String,
+                           pkg: String,
+                           fileName = s"{camelSchemaName}Rows.scala")
   }
 
   def run(uri: URI,
@@ -60,7 +70,7 @@ object Generator {
             idType,
             manualForeignKeys
           )
-          /*
+        /*
           val tableGenerator: TableFileGenerator = ???
 
           outputSchemaCode(
@@ -70,7 +80,7 @@ object Generator {
             pkg = pkg,
             tableGen = tableGenerator,
             rowGen = rowGenerator)
-           */
+       */
       }
     } finally {
       dc.db.close()
