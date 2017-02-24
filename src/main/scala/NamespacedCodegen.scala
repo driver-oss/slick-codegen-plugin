@@ -57,7 +57,10 @@ object Generator {
             schemaOnlyModel,
             headerComment = header,
             imports = schemaImports.map("import " + _).mkString("\n"),
-            schemaName = schemaName
+            schemaName = schemaName,
+            dbModel,
+            idType,
+            manualForeignKeys
           )
           /*
           val tableGenerator: TableFileGenerator = ???
@@ -235,59 +238,6 @@ object SchemaParser {
 
     jdbcProfile.createModel(filteredTables)
   }
-}
-
-class RowGenerator(pkg: String,
-                   fullDatabaseModel: Model,
-                   schemaOnlyModel: Model,
-                   manualForeignKeys: Map[(String, String), (String, String)],
-                   override val parentType: Option[String],
-                   idType: Option[String],
-                   override val headerComment: String,
-                   schemaImports: List[String],
-                   typeReplacements: Map[String, String])
-    extends Generator(pkg,
-                      fullDatabaseModel,
-                      schemaOnlyModel,
-                      manualForeignKeys,
-                      parentType,
-                      idType,
-                      headerComment,
-                      schemaImports,
-                      typeReplacements) {
-
-  override def Table = new TableO(_) {
-    //override def Column = new IdColumn(_){ }
-    override def code = Seq[Def](EntityType).map(_.docWithCode)
-  }
-
-  override def code = tables.map(_.code.mkString("\n")).mkString("\n\n")
-
-  def writeToFile(schemaName: String,
-                  folder: String,
-                  pkg: String,
-                  fileName: String) = {
-    writeStringToFile(packageCode(pkg, schemaName),
-                      folder = folder,
-                      pkg = pkg,
-                      fileName = fileName)
-  }
-
-  override val imports = schemaImports.map("import " + _).mkString("\n")
-
-  def packageCode(pkg: String, schemaName: String) = {
-    s"""|package $pkg
-        |package $schemaName
-        |
-        |$imports
-        |
-        |$code
-        |""".stripMargin.trim()
-  }
-
-  // disable helpers for Table schema generators
-  //override def packageCode(profile: String, pkg: String, container: String, parentType: Option[String]) = ???
-  //override def writeToFile(profile: String, folder: String, pkg: String, container: String, fileName: String) = ???
 }
 
 class TableGenerator(

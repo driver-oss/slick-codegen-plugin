@@ -5,10 +5,18 @@ class RowSourceCodeGenerator(
   model: m.Model,
   override val headerComment: String,
   override val imports: String,
-  override val schemaName: String
-) extends SourceCodeGenerator(model) with RowOutputHelpers {
+  override val schemaName: String,
+  fullDatabaseModel: m.Model,
+  idType: Option[String],
+  manualForeignKeys: Map[(String, String), (String, String)]
+) extends TypedIdSourceCodeGenerator(
+  fullDatabaseModel,
+  idType,
+  manualForeignKeys
+) with RowOutputHelpers {
 
-  override def Table = new Table(_) { table =>
+  override def Table = new TypedIdTable(_) { table =>
+    override def Column = new TypedIdColumn(_) { }
     override def EntityType = new EntityType {
       override def code: String =
         (if (classEnabled) "final " else "") + super.code
