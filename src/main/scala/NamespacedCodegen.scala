@@ -43,6 +43,7 @@ object Generator {
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
       schemaNames.map(SchemaParser.parse)
+    val imports = schemaImports.map("import " + _).mkString("\n")
 
     try {
       val dbModel: Model = Await.result(
@@ -64,14 +65,24 @@ object Generator {
           val rowGenerator = new RowSourceCodeGenerator(
             schemaOnlyModel,
             headerComment = header,
-            imports = schemaImports.map("import " + _).mkString("\n"),
+            imports = imports,
             schemaName = schemaName,
             dbModel,
             idType,
             manualForeignKeys
           )
-        /*
-          val tableGenerator: TableFileGenerator = ???
+
+          val tableGenerator = new TableSourceCodeGenerator(
+            schemaOnlyModel = schemaOnlyModel,
+            headerComment = header,
+            imports = imports,
+            schemaName = schemaName,
+            fullDatabaseModel = dbModel,
+            pkg = pkg,
+            manualForeignKeys,
+            parentType = parentType,
+            idType,
+            typeReplacements)
 
           outputSchemaCode(
             schemaName = schemaName,
@@ -80,7 +91,6 @@ object Generator {
             pkg = pkg,
             tableGen = tableGenerator,
             rowGen = rowGenerator)
-       */
       }
     } finally {
       dc.db.close()
