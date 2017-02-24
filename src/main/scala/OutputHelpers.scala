@@ -28,6 +28,7 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
         |trait Tables${parentType.fold("")(" extends " + _)} {
         |  import profile.api._
         |  ${indent(code)}
+        |}
         |""".stripMargin.trim()
 
   def writeTablesToFile(profile: String,
