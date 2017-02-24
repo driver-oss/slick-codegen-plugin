@@ -2,11 +2,13 @@ import slick.codegen.SourceCodeGenerator
 import slick.{model => m}
 
 class TypedIdSourceCodeGenerator(
-    model: m.Model,
+    singleSchemaModel: m.Model,
+    databaseModel: m.Model,
     idType: Option[String],
     manualForeignKeys: Map[(String, String), (String, String)]
-) extends SourceCodeGenerator(model) {
-  val manualReferences = SchemaParser.references(model, manualForeignKeys)
+) extends SourceCodeGenerator(singleSchemaModel) {
+  val manualReferences =
+    SchemaParser.references(databaseModel, manualForeignKeys)
 
   def derefColumn(table: m.Table, column: m.Column): (m.Table, m.Column) = {
     val referencedColumn: Seq[(m.Table, m.Column)] =
@@ -14,7 +16,7 @@ class TypedIdSourceCodeGenerator(
         .filter(tableFk => tableFk.referencingColumns.forall(_ == column))
         .filter(columnFk => columnFk.referencedColumns.length == 1)
         .flatMap(_.referencedColumns.map(c =>
-          (model.tablesByName(c.table), c)))
+          (databaseModel.tablesByName(c.table), c)))
     assert(referencedColumn.distinct.length <= 1, referencedColumn)
 
     referencedColumn.headOption

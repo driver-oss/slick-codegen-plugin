@@ -10,6 +10,7 @@ class RowSourceCodeGenerator(
     idType: Option[String],
     manualForeignKeys: Map[(String, String), (String, String)]
 ) extends TypedIdSourceCodeGenerator(
+      model,
       fullDatabaseModel,
       idType,
       manualForeignKeys
@@ -40,7 +41,8 @@ class TableSourceCodeGenerator(
     parentType: Option[String],
     idType: Option[String],
     typeReplacements: Map[String, String])
-    extends TypedIdSourceCodeGenerator(fullDatabaseModel,
+    extends TypedIdSourceCodeGenerator(schemaOnlyModel,
+                                       fullDatabaseModel,
                                        idType,
                                        manualForeignKeys)
     with TableOutputHelpers {
