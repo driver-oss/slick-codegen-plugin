@@ -5,19 +5,28 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import slick.backend.DatabaseConfig
-import slick.codegen.{SourceCodeGenerator, StringGeneratorHelpers}
+import slick.codegen.SourceCodeGenerator
 import slick.driver.JdbcProfile
-import slick.{model => sModel}
-import slick.model.{Column, Model, Table, QualifiedName}
+
+trait TableFileGenerator { self: SourceCodeGenerator =>
+  def writeTablesToFile(profile: String,
+                        folder: String,
+                        pkg: String,
+                        fileName: String): Unit
+}
+
+trait RowFileGenerator { self: SourceCodeGenerator =>
+  def writeRowsToFile(folder: String, pkg: String, fileName: String): Unit
+}
 
 object Generator {
 
-  def outputSchemaCode(schemaName: String,
-                       profile: String,
-                       folder: String,
-                       pkg: String,
-                       tableGen: TableFileGenerator,
-                       rowGen: RowFileGenerator): Unit = {
+  private def outputSchemaCode(schemaName: String,
+                               profile: String,
+                               folder: String,
+                               pkg: String,
+                               tableGen: TableFileGenerator,
+                               rowGen: RowFileGenerator): Unit = {
     val camelSchemaName = schemaName.split('_').map(_.capitalize).mkString("")
 
     tableGen.writeTablesToFile(profile: String,
@@ -46,7 +55,7 @@ object Generator {
     val imports = schemaImports.map("import " + _).mkString("\n")
 
     try {
-      val dbModel: Model = Await.result(
+      val dbModel: slick.model.Model = Await.result(
         dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
         Duration.Inf)
 
@@ -73,25 +82,24 @@ object Generator {
             typeReplacements
           )
 
-          val tableGenerator = new TableSourceCodeGenerator(
-            schemaOnlyModel = schemaOnlyModel,
-            headerComment = header,
-            imports = imports,
-            schemaName = schemaName,
-            fullDatabaseModel = dbModel,
-            pkg = pkg,
-            manualForeignKeys,
-            parentType = parentType,
-            idType,
-            typeReplacements)
+          val tableGenerator =
+            new TableSourceCodeGenerator(schemaOnlyModel = schemaOnlyModel,
+                                         headerComment = header,
+                                         imports = imports,
+                                         schemaName = schemaName,
+                                         fullDatabaseModel = dbModel,
+                                         pkg = pkg,
+                                         manualForeignKeys,
+                                         parentType = parentType,
+                                         idType,
+                                         typeReplacements)
 
-          outputSchemaCode(
-            schemaName = schemaName,
-            profile = profile,
-            folder = outputPath,
-            pkg = pkg,
-            tableGen = tableGenerator,
-            rowGen = rowGenerator)
+          outputSchemaCode(schemaName = schemaName,
+                           profile = profile,
+                           folder = outputPath,
+                           pkg = pkg,
+                           tableGen = tableGenerator,
+                           rowGen = rowGenerator)
       }
     } finally {
       dc.db.close()

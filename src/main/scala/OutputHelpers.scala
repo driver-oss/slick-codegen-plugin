@@ -1,16 +1,5 @@
 import slick.codegen.{SourceCodeGenerator, OutputHelpers}
 
-trait TableFileGenerator { self: SourceCodeGenerator =>
-  def writeTablesToFile(profile: String,
-                        folder: String,
-                        pkg: String,
-                        fileName: String): Unit
-}
-
-trait RowFileGenerator { self: SourceCodeGenerator =>
-  def writeRowsToFile(folder: String, pkg: String, fileName: String): Unit
-}
-
 trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
   self: SourceCodeGenerator =>
 
