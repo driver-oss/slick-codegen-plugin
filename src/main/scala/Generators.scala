@@ -29,14 +29,19 @@ class RowSourceCodeGenerator(
 }
 
 class TableSourceCodeGenerator(
-    pkg: String,
-    fullDatabaseModel: m.Model,
     schemaOnlyModel: m.Model,
+    override val headerComment: String,
+    override val imports: String,
+    override val schemaName: String,
+    fullDatabaseModel: m.Model,
+    pkg: String,
     manualForeignKeys: Map[(String, String), (String, String)],
     parentType: Option[String],
     idType: Option[String],
     typeReplacements: Map[String, String])
-    extends TypedIdSourceCodeGenerator(fullDatabaseModel, idType, manualForeignKeys) {
+    extends TypedIdSourceCodeGenerator(fullDatabaseModel, idType, manualForeignKeys)
+  with TableOutputHelpers
+{
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
