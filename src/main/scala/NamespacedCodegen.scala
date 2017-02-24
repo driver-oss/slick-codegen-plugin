@@ -97,7 +97,7 @@ abstract class Generator(
     schemaImports: List[String],
     typeReplacements: Map[String, String])
     extends SourceCodeGenerator(schemaOnlyModel)
-    with OutputHelpers {
+    with OOutputHelpers {
 
   override val imports = schemaImports.map("import " + _).mkString("\n")
 
