@@ -38,7 +38,7 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
         |/** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
         |trait Tables${parentType.fold("")(" extends " + _)} {
         |  import profile.api._
-        |  ${indent(code)}       |
+        |  ${indent(code)}
         |""".stripMargin.trim()
 
   def writeTablesToFile(profile: String,
