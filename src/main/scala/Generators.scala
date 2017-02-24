@@ -45,7 +45,7 @@ class TableSourceCodeGenerator(
     fullDatabaseModel: m.Model,
     pkg: String,
     manualForeignKeys: Map[(String, String), (String, String)],
-    parentType: Option[String],
+    override val parentType: Option[String],
     idType: Option[String],
     typeReplacements: Map[String, String])
     extends TypedIdSourceCodeGenerator(schemaOnlyModel,
