@@ -8,7 +8,6 @@ trait OutputHelpers extends slick.codegen.OutputHelpers {
                            pkg: String,
                            container: String,
                            parentType: Option[String]): String = {
-    val traitName = container.capitalize + "SchemaDef"
     s"""|${headerComment.trim().lines.map("// " + _).mkString("\n")}
         |package $pkg
         |
@@ -17,10 +16,10 @@ trait OutputHelpers extends slick.codegen.OutputHelpers {
         |/** Stand-alone Slick data model for immediate use */
         |package object $container extends {
         |  val profile = $profile
-        |} with $traitName
+        |} with Tables
         |
         |/** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
-        |trait $traitName${parentType.fold("")(" extends " + _)} {
+        |trait Tables${parentType.fold("")(" extends " + _)} {
         |  import profile.api._
         |  ${indent(code)}
         |}""".stripMargin.trim()

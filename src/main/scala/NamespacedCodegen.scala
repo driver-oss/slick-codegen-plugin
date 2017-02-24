@@ -46,6 +46,9 @@ object Generator {
                                        Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
+          val camelSchemaName =
+            schemaName.split('_').map(_.capitalize).mkString("")
+
           val tableGenerator = new TableGenerator(pkg,
                                                   dbModel,
                                                   schemaOnlyModel,
@@ -54,13 +57,13 @@ object Generator {
                                                   idType,
                                                   header,
                                                   schemaImports,
-                                                  typeReplacements,
-                                                  schemaName)
+                                                  typeReplacements)
           tableGenerator.writeToFile(profile = profile,
                                      folder = outputPath,
-                                     pkg = pkg,
+                                     pkg = s"$pkg.$schemaName",
                                      container = schemaName,
-                                     fileName = s"${schemaName}.scala")
+                                     fileName =
+                                       s"${camelSchemaName}Tables.scala")
 
           val rowGenerator = new RowGenerator(pkg,
                                               dbModel,
@@ -73,9 +76,8 @@ object Generator {
                                               typeReplacements)
           rowGenerator.writeToFile(schemaName = schemaName,
                                    folder = outputPath,
-                                   pkg = pkg,
-                                   fileName =
-                                     s"${schemaName.capitalize}Rows.scala")
+                                   pkg = s"$pkg.$schemaName",
+                                   fileName = s"${camelSchemaName}Rows.scala")
       }
     } finally {
       dc.db.close()
@@ -339,8 +341,7 @@ class TableGenerator(
     idType: Option[String],
     override val headerComment: String,
     schemaImports: List[String],
-    typeReplacements: Map[String, String],
-    schemaName: String)
+    typeReplacements: Map[String, String])
     extends Generator(pkg,
                       fullDatabaseModel,
                       schemaOnlyModel,
@@ -354,10 +355,6 @@ class TableGenerator(
   override def Table = new TableO(_) {
     override def EntityType = new EntityType {
       override def enabled = false
-    }
-    override def TableClass = new TableClass {
-      override def elementType = s"$schemaName.${super.elementType}"
-      override def optionEnabled = false
     }
   }
 }
