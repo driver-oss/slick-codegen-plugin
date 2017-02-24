@@ -53,38 +53,23 @@ object Generator {
                                        Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
-          val camelSchemaName =
-            schemaName.split('_').map(_.capitalize).mkString("")
+          val rowGenerator = new RowSourceCodeGenerator(
+            schemaOnlyModel,
+            headerComment = header,
+            imports = schemaImports.map("import " + _).mkString("\n"),
+            schemaName = schemaName
+          )
+          /*
+          val tableGenerator: TableFileGenerator = ???
 
-          val tableGenerator = new TableGenerator(pkg,
-                                                  dbModel,
-                                                  schemaOnlyModel,
-                                                  manualForeignKeys,
-                                                  parentType,
-                                                  idType,
-                                                  header,
-                                                  schemaImports,
-                                                  typeReplacements)
-          tableGenerator.writeToFile(profile = profile,
-                                     folder = outputPath,
-                                     pkg = s"$pkg.$schemaName",
-                                     container = schemaName,
-                                     fileName =
-                                       s"${camelSchemaName}Tables.scala")
-
-          val rowGenerator = new RowGenerator(pkg,
-                                              dbModel,
-                                              schemaOnlyModel,
-                                              manualForeignKeys,
-                                              parentType,
-                                              idType,
-                                              header,
-                                              schemaImports,
-                                              typeReplacements)
-          rowGenerator.writeToFile(schemaName = schemaName,
-                                   folder = outputPath,
-                                   pkg = s"$pkg.$schemaName",
-                                   fileName = s"${camelSchemaName}Rows.scala")
+          outputSchemaCode(
+            schemaName = schemaName,
+            profile = profile,
+            folder = outputPath,
+            pkg = pkg,
+            tableGen = tableGenerator,
+            rowGen = rowGenerator)
+           */
       }
     } finally {
       dc.db.close()
