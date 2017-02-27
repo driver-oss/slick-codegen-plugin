@@ -10,6 +10,12 @@ class TypedIdSourceCodeGenerator(
   val manualReferences =
     SchemaParser.references(databaseModel, manualForeignKeys)
 
+  val rawTypeToColumnMaper = Map(
+    "java.util.UUID" -> "uuidKeyMapper",
+    "String" -> "stringKeyMapper",
+    "Int" -> "intKeyMapper"
+  )
+
   def derefColumn(table: m.Table, column: m.Column): (m.Table, m.Column) = {
     val referencedColumn: Seq[(m.Table, m.Column)] =
       table.foreignKeys
@@ -34,6 +40,16 @@ class TypedIdSourceCodeGenerator(
         val rowTypeName = entityName(tableName.table)
         val idTypeName = idType.getOrElse("Id")
         s"$idTypeName[$schemaObjectName.$rowTypeName]"
+      }
+
+      override def code = {
+        val (referencedTable, referencedColumn) =
+          derefColumn(table.model, column.model)
+        if (referencedColumn.options.contains(
+          slick.ast.ColumnOption.PrimaryKey))
+          super.code + s"(${rawTypeToColumnMaper(model.tpe)})"
+        else
+          super.code
       }
 
       override def rawType: String = {
