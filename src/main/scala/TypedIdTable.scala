@@ -12,8 +12,8 @@ class TypedIdSourceCodeGenerator(
 
   val rawTypeToColumnMaper = Map(
     "java.util.UUID" -> "uuidKeyMapper",
-    "String" -> "stringKeyMapper",
-    "Int" -> "intKeyMapper"
+    "String" -> "naturalKeyMapper",
+    "Int" -> "serialKeyMapper"
   )
 
   def derefColumn(table: m.Table, column: m.Column): (m.Table, m.Column) = {
