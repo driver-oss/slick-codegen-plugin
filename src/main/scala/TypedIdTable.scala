@@ -10,7 +10,7 @@ class TypedIdSourceCodeGenerator(
   val manualReferences =
     SchemaParser.references(databaseModel, manualForeignKeys)
 
-  val rawTypeToColumnMaper = Map(
+  val modelTypeToColumnMaper = Map(
     "java.util.UUID" -> "uuidKeyMapper",
     "String" -> "naturalKeyMapper",
     "Int" -> "serialKeyMapper"
@@ -35,11 +35,10 @@ class TypedIdSourceCodeGenerator(
     class TypedIdColumn(override val model: m.Column) extends Column(model) {
       column =>
 
-      def tableReferenceName(tableName: m.QualifiedName) = {
+      def rowTypeFor(tableName: m.QualifiedName) = {
         val schemaObjectName = tableName.schema.getOrElse("`public`")
         val rowTypeName = entityName(tableName.table)
-        val idTypeName = idType.getOrElse("Id")
-        s"$idTypeName[$schemaObjectName.$rowTypeName]"
+        s"$schemaObjectName.$rowTypeName"
       }
 
       override def code = {
@@ -47,7 +46,9 @@ class TypedIdSourceCodeGenerator(
           derefColumn(table.model, column.model)
         if (referencedColumn.options.contains(
           slick.ast.ColumnOption.PrimaryKey))
-          super.code + s"(${rawTypeToColumnMaper(model.tpe)})"
+          s"""|implicit val ${name}KeyMapper: BaseColumnType[${rawType}] =
+              |  ${modelTypeToColumnMaper(model.tpe)}[${rowTypeFor(referencedTable.name)}]\n
+              |${super.code}"""
         else
           super.code
       }
@@ -57,8 +58,10 @@ class TypedIdSourceCodeGenerator(
         val (referencedTable, referencedColumn) =
           derefColumn(table.model, column.model)
         if (referencedColumn.options.contains(
-              slick.ast.ColumnOption.PrimaryKey))
-          tableReferenceName(referencedTable.name)
+          slick.ast.ColumnOption.PrimaryKey)) {
+          val idTypeName = idType.getOrElse("Id")
+          s"$idTypeName[${rowTypeFor(referencedTable.name)}]"
+        }
         else super.rawType
       }
     }
