@@ -56,8 +56,12 @@ class TypedIdSourceCodeGenerator(
     def PrimaryKeyMapper = new PrimaryKeyMapper { }
 
     class PrimaryKeyMapperDef extends TermDef {
-      def primaryKeyColumn: Option[Column] = table.primaryKey.filter(_.columns.length == 1).flatMap(_.columns.headOption)
-
+      def primaryKeyColumn: Option[Column] = {
+        table.model.columns
+          .filter(_.options.contains(slick.ast.ColumnOption.PrimaryKey))
+          .headOption.map(c => table.columnsByName(c.name))
+      }
+        
       override def enabled = primaryKeyColumn.isDefined
 
       override def doc = s"Implicit for mapping primary key of ${tableName} to a base column"
