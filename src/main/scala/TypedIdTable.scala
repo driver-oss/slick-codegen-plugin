@@ -42,27 +42,33 @@ class TypedIdSourceCodeGenerator(
     s"${idType.getOrElse("Id")}[${pKeyTypeTag(columnRef)}]"
   }
 
-  class TypedIdTable(model: m.Table) extends Table(model) {
+  class TypedIdTable(model: m.Table) extends Table(model) { table =>
+    override def definitions = Seq[Def]( EntityType, PlainSqlMapper, TableClass, TableValue, PrimaryKeyMapper )
+
     class TypedIdColumn(override val model: m.Column) extends Column(model) {
       override def rawType: String = {
         keyReferences.get(model).fold(super.rawType)(pKeyType)
       }
     }
 
-    class TypedIdPrimaryKey(override val model: m.PrimaryKey) extends PrimaryKey(model) { primaryKey =>
-      def `super.code` = s"""val $name = primaryKey("$dbName", ${compoundValue(columns.map(_.name))})"""
+    type PrimaryKeyMapper = PrimaryKeyMapperDef
 
-      override def code = {
-        val implicitKeyBaseMapper =
-        primaryKey.columns.headOption
-          .filter(_ => primaryKey.columns.length == 1)
-          .map { column =>
-            val name = termName(column.rawName + "KeyMapper")
-            val tpe = s"BaseColumnType[column.rawName]"
-            val mapping = s"${modelTypeToColumnMaper(column.model.tpe)}[${pKeyTypeTag(column.model)}]"
-            s"implicit def $name: $tpe = $mapping\n"
-        }
-        implicitKeyBaseMapper.fold(super.code)(super.code + _)
+    def PrimaryKeyMapper = new PrimaryKeyMapper { }
+
+    class PrimaryKeyMapperDef extends TermDef {
+      def primaryKeyColumn: Option[Column] = table.primaryKey.filter(_.columns.length == 1).flatMap(_.columns.headOption)
+
+      override def enabled = primaryKeyColumn.isDefined
+
+      override def doc = s"Implicit for mapping primary key of ${tableName} to a base column"
+
+      override def rawName = tableName+"KeyMapper"
+
+      override def code = primaryKeyColumn.fold("") { column =>
+        val tpe = s"BaseColumnType[${column.rawName}]"
+        s"""|implicit def $name: $tpe = 
+            |${modelTypeToColumnMaper(column.model.tpe)}[${pKeyTypeTag(column.model)}]
+            |""".stripMargin.lines.mkString("").trim
       }
     }
   }
