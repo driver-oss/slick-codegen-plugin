@@ -72,11 +72,11 @@ object Generator {
             Duration.Inf)
 
           val rowGenerator = new RowSourceCodeGenerator(
-            schemaOnlyModel,
+            model = schemaOnlyModel,
             headerComment = header,
             imports = imports,
             schemaName = schemaName,
-            dbModel,
+            fullDatabaseModel = dbModel,
             idType,
             manualForeignKeys,
             typeReplacements

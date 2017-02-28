@@ -11,8 +11,8 @@ class RowSourceCodeGenerator(
     manualForeignKeys: Map[(String, String), (String, String)],
     typeReplacements: Map[String, String]
 ) extends TypedIdSourceCodeGenerator(
-      model,
-      fullDatabaseModel,
+      singleSchemaModel = model,
+      databaseModel = fullDatabaseModel,
       idType,
       manualForeignKeys
     )
@@ -48,8 +48,8 @@ class TableSourceCodeGenerator(
     override val parentType: Option[String],
     idType: Option[String],
     typeReplacements: Map[String, String])
-    extends TypedIdSourceCodeGenerator(schemaOnlyModel,
-                                       fullDatabaseModel,
+    extends TypedIdSourceCodeGenerator(singleSchemaModel = schemaOnlyModel,
+                                       databaseModel = fullDatabaseModel,
                                        idType,
                                        manualForeignKeys)
     with TableOutputHelpers {
