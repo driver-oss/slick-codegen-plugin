@@ -58,18 +58,18 @@ class TypedIdSourceCodeGenerator(
     class PrimaryKeyMapperDef extends TermDef {
       def primaryKeyColumn: Option[Column] = {
         table.model.columns
-          .filter(_.options.contains(slick.ast.ColumnOption.PrimaryKey))
+          .flatMap(c => keyReferences.get(c).filter(_ == c))
           .headOption.map(c => table.columnsByName(c.name))
       }
         
       override def enabled = primaryKeyColumn.isDefined
 
-      override def doc = s"Implicit for mapping primary key of ${tableName} to a base column"
+      override def doc = s"Implicit for mapping primary key of ${tableName(table.model.name.table)} to a base column"
 
-      override def rawName = tableName+"KeyMapper"
+      override def rawName = tableName(table.model.name.table) + "KeyMapper"
 
       override def code = primaryKeyColumn.fold("") { column =>
-        val tpe = s"BaseColumnType[${column.rawName}]"
+        val tpe = s"BaseColumnType[${column.rawType}]"
         s"""|implicit def $name: $tpe = 
             |${modelTypeToColumnMaper(column.model.tpe)}[${pKeyTypeTag(column.model)}]
             |""".stripMargin.lines.mkString("").trim
