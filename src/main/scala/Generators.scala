@@ -20,6 +20,8 @@ class RowSourceCodeGenerator(
 
   override def Table = new TypedIdTable(_) { table =>
 
+    override def PrimaryKey = new TypedIdPrimaryKey(_) { }
+
     override def Column = new TypedIdColumn(_) {
       override def rawType: String = {
         typeReplacements.getOrElse(model.tpe, super.rawType)

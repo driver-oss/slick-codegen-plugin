@@ -48,5 +48,22 @@ class TypedIdSourceCodeGenerator(
         keyReferences.get(model).fold(super.rawType)(pKeyType)
       }
     }
+
+    class TypedIdPrimaryKey(override val model: m.PrimaryKey) extends PrimaryKey(model) { primaryKey =>
+      def `super.code` = s"""val $name = primaryKey("$dbName", ${compoundValue(columns.map(_.name))})"""
+
+      override def code = {
+        val implicitKeyBaseMapper =
+        primaryKey.columns.headOption
+          .filter(_ => primaryKey.columns.length == 1)
+          .map { column =>
+            val name = termName(column.rawName + "KeyMapper")
+            val tpe = s"BaseColumnType[column.rawName]"
+            val mapping = s"${modelTypeToColumnMaper(column.model.tpe)}[${pKeyTypeTag(column.model)}]"
+            s"implicit def $name: $tpe = $mapping\n"
+        }
+        implicitKeyBaseMapper.fold(super.code)(super.code + _)
+      }
+    }
   }
 }
