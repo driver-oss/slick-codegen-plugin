@@ -9,7 +9,7 @@ import slick.codegen.SourceCodeGenerator
 import slick.driver.JdbcProfile
 
 trait TableFileGenerator { self: SourceCodeGenerator =>
-  def writeTablesToFile(profile: String,
+  def writeTablesToFile(profile: Option[String],
                         folder: String,
                         pkg: String,
                         fileName: String): Unit
@@ -22,19 +22,19 @@ trait RowFileGenerator { self: SourceCodeGenerator =>
 object Generator {
 
   private def outputSchemaCode(schemaName: String,
-                               profile: String,
+                               profile: Option[String],
                                folder: String,
                                pkg: String,
                                tableGen: TableFileGenerator,
                                rowGen: RowFileGenerator): Unit = {
     val camelSchemaName = schemaName.split('_').map(_.capitalize).mkString("")
 
-    tableGen.writeTablesToFile(profile: String,
-                               folder: String,
-                               pkg: String,
+    tableGen.writeTablesToFile(profile = profile,
+                               folder = folder,
+                               pkg = pkg,
                                fileName = s"${camelSchemaName}Tables.scala")
-    rowGen.writeRowsToFile(folder: String,
-                           pkg: String,
+    rowGen.writeRowsToFile(folder = folder,
+                           pkg = pkg,
                            fileName = s"${camelSchemaName}Rows.scala")
   }
 
@@ -61,9 +61,10 @@ object Generator {
 
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
         case (schemaName, tables) =>
-          val profile =
-            s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
-              .getFragment()}").driver"""
+          val profile = Option.empty[String]
+          // TODO: retrieve profile later via configuration
+          // s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
+          //   .getFragment()}").driver"""
 
           val schemaOnlyModel = Await.result(
             dc.db.run(
