@@ -63,10 +63,26 @@ class TableSourceCodeGenerator(
        |}
        |""".stripMargin
 
-  override def code = super.code.lines.drop(1).mkString("\n")
-  // Drops needless import: `"import slick.model.ForeignKeyAction\n"`.
-  // Alias to ForeignKeyAction is in profile.api
-  // TODO: fix upstream
+  override def code = {
+    // Drops needless import: `"import slick.model.ForeignKeyAction\n"`.
+    // Alias to ForeignKeyAction is in profile.api
+    // TODO: fix upstream
+    val tableCode = super.code.lines.drop(1).mkString("\n")
+
+    val tripleQuote = "\"\"\""
+    val namespaceDDL =
+      s"""|val createNamespaceSchema = {
+          |  implicit val GRUnit = slick.jdbc.GetResult(_ => ())
+          |  sql${tripleQuote}CREATE SCHEMA IF NOT EXISTS "$schemaName";${tripleQuote}.as[Unit]
+          |}
+          |
+          |val dropNamespaceSchema = {
+          |  implicit val GRUnit = slick.jdbc.GetResult(_ => ())
+          |  sql${tripleQuote}DROP SCHEMA "$schemaName" CASCADE;${tripleQuote}.as[Unit]
+          |} """
+
+    tableCode + "\n\n" + namespaceDDL
+  }
 
   override def Table = new this.TypedIdTable(_) { table =>
     override def TableClass = new TableClass() {
