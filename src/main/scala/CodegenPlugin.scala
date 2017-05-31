@@ -42,6 +42,10 @@ object CodegenPlugin extends AutoPlugin {
       "codegen-schema-imports",
       "A list of things to import into each schema definition"
     )
+    lazy val codegenSchemaRowImports = SettingKey[Option[List[String]]](
+      "codegen-schema-imports",
+      "An optional list of things to import for table row definitions of each schema. Uses schemaImports otherwise."
+    )
     lazy val codegenTypeReplacements = SettingKey[Map[String, String]](
       "codegen-type-replacements",
       "A map of types to find and replace"
@@ -84,6 +88,7 @@ object CodegenPlugin extends AutoPlugin {
               codegenIdType.value,
               codegenHeader.value,
               codegenSchemaImports.value,
+              codegenSchemaRowImports.value getOrElse codegenSchemaImports.value,
               codegenTypeReplacements.value
             )
         }

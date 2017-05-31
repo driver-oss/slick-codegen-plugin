@@ -46,13 +46,15 @@ object Generator {
           parentType: Option[String],
           idType: Option[String],
           header: String,
-          schemaImports: List[String],
+          tablesFileImports: List[String],
+          rowsFileImports: List[String],
           typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
       schemaNames.map(ModelTransformation.parseSchemaList)
-    val imports = schemaImports.map("import " + _).mkString("\n")
+
+    def importStatements(imports: List[String]) = imports.map("import " + _).mkString("\n")
 
     try {
       val dbModel: slick.model.Model = Await.result(
@@ -74,7 +76,7 @@ object Generator {
           val rowGenerator = new RowSourceCodeGenerator(
             model = schemaOnlyModel,
             headerComment = header,
-            imports = imports,
+            imports = importStatements(rowsFileImports),
             schemaName = schemaName,
             fullDatabaseModel = dbModel,
             idType,
@@ -85,7 +87,7 @@ object Generator {
           val tableGenerator =
             new TableSourceCodeGenerator(schemaOnlyModel = schemaOnlyModel,
                                          headerComment = header,
-                                         imports = imports,
+                                         imports = importStatements(tablesFileImports),
                                          schemaName = schemaName,
                                          fullDatabaseModel = dbModel,
                                          pkg = pkg,
