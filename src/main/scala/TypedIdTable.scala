@@ -8,7 +8,7 @@ class TypedIdSourceCodeGenerator(
     manualForeignKeys: Map[(String, String), (String, String)]
 ) extends SourceCodeGenerator(singleSchemaModel) {
   val manualReferences =
-    SchemaParser.references(databaseModel, manualForeignKeys)
+    ModelTransformation.references(databaseModel, manualForeignKeys)
 
   val modelTypeToColumnMaper = Map(
     "java.util.UUID" -> "uuidKeyMapper",

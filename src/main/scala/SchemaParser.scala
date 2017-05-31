@@ -3,9 +3,22 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import slick.dbio.DBIO
 import slick.driver.JdbcProfile
 import slick.jdbc.meta.MTable
+import slick.profile.RelationalProfile.ColumnOption.Length
+import slick.profile.SqlProfile.ColumnOption.SqlType
 import slick.{model => m}
 
-object SchemaParser {
+object ModelTransformation {
+
+  def citextNoLength(dbModel: m.Model): m.Model =
+    dbModel.copy(tables = dbModel.tables.map(table =>
+      table.copy(columns = table.columns.map(column =>
+        if (column.options contains SqlType("citext")) {
+          column.copy(options = column.options.filter {
+            case length: Length => false
+            case option => true
+          })
+        } else column))))
+
   def references(dbModel: m.Model,
                  tcMappings: Map[(String, String), (String, String)])
     : Map[(String, String), (m.Table, m.Column)] = {
@@ -26,7 +39,8 @@ object SchemaParser {
     }
   }
 
-  def parse(schemaTableNames: List[String]): Map[String, List[String]] =
+  def parseSchemaList(
+      schemaTableNames: List[String]): Map[String, List[String]] =
     schemaTableNames
       .map(_.split('.'))
       .groupBy(_.head)
@@ -55,6 +69,6 @@ object SchemaParser {
       }
     }
 
-    jdbcProfile.createModel(filteredTables)
+    jdbcProfile.createModel(filteredTables).map(citextNoLength)
   }
 }
