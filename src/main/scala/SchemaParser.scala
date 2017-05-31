@@ -7,7 +7,7 @@ import slick.profile.RelationalProfile.ColumnOption.Length
 import slick.profile.SqlProfile.ColumnOption.SqlType
 import slick.{model => m}
 
-object SchemaParser {
+object ModelTransformation {
 
   def citextNoLength(dbModel: m.Model): m.Model =
     dbModel.copy(tables = dbModel.tables.map(table =>
@@ -39,7 +39,8 @@ object SchemaParser {
     }
   }
 
-  def parse(schemaTableNames: List[String]): Map[String, List[String]] =
+  def parseSchemaList(
+      schemaTableNames: List[String]): Map[String, List[String]] =
     schemaTableNames
       .map(_.split('.'))
       .groupBy(_.head)
