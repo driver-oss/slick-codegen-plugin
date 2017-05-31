@@ -52,13 +52,14 @@ object Generator {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
-      schemaNames.map(SchemaParser.parse)
+      schemaNames.map(ModelTransformation.parseSchemaList)
 
     def importStatements(imports: List[String]) = imports.map("import " + _).mkString("\n")
 
     try {
       val dbModel: slick.model.Model = Await.result(
-        dc.db.run(SchemaParser.createModel(dc.driver, parsedSchemasOpt)),
+        dc.db.run(
+          ModelTransformation.createModel(dc.driver, parsedSchemasOpt)),
         Duration.Inf)
 
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
@@ -68,9 +69,8 @@ object Generator {
               .getFragment()}").driver"""
 
           val schemaOnlyModel = Await.result(
-            dc.db.run(
-              SchemaParser.createModel(dc.driver,
-                                       Some(Map(schemaName -> tables)))),
+            dc.db.run(ModelTransformation
+              .createModel(dc.driver, Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
           val rowGenerator = new RowSourceCodeGenerator(
