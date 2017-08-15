@@ -13,7 +13,8 @@ class TypedIdSourceCodeGenerator(
   val modelTypeToColumnMaper = Map(
     "java.util.UUID" -> "uuidKeyMapper",
     "String" -> "naturalKeyMapper",
-    "Int" -> "serialKeyMapper"
+    "Int" -> "serialKeyMapper",
+    "Long" -> "serialKeyMapper"
   )
 
   val keyReferences: Map[m.Column, m.Column] = {
