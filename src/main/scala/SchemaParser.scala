@@ -1,7 +1,7 @@
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import slick.dbio.DBIO
-import slick.driver.JdbcProfile
+import slick.jdbc.JdbcProfile
 import slick.jdbc.meta.MTable
 import slick.relational.RelationalProfile.ColumnOption.Length
 import slick.sql.SqlProfile.ColumnOption.SqlType

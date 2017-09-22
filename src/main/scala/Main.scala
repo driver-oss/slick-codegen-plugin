@@ -1,12 +1,10 @@
 import java.net.URI
-import java.nio.file.Paths
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.concurrent.ExecutionContext.Implicits.global
-import slick.backend.DatabaseConfig
+import slick.basic.DatabaseConfig
 import slick.codegen.SourceCodeGenerator
-import slick.driver.JdbcProfile
+import slick.jdbc.JdbcProfile
 
 trait TableFileGenerator { self: SourceCodeGenerator =>
   def writeTablesToFile(profile: String,
@@ -59,7 +57,7 @@ object Generator {
     try {
       val dbModel: slick.model.Model = Await.result(
         dc.db.run(
-          ModelTransformation.createModel(dc.driver, parsedSchemasOpt)),
+          ModelTransformation.createModel(dc.profile, parsedSchemasOpt)),
         Duration.Inf)
 
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
@@ -70,7 +68,7 @@ object Generator {
 
           val schemaOnlyModel = Await.result(
             dc.db.run(ModelTransformation
-              .createModel(dc.driver, Some(Map(schemaName -> tables)))),
+              .createModel(dc.profile, Some(Map(schemaName -> tables)))),
             Duration.Inf)
 
           val rowGenerator = new RowSourceCodeGenerator(

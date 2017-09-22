@@ -1,4 +1,3 @@
-import slick.codegen.SourceCodeGenerator
 import slick.{model => m}
 
 class RowSourceCodeGenerator(

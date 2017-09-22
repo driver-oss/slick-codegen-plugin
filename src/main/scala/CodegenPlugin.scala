@@ -1,6 +1,4 @@
 import sbt._
-import sbt.Keys._
-import complete.DefaultParsers._
 
 object CodegenPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
