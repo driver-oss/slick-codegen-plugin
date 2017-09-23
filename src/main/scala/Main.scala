@@ -7,10 +7,7 @@ import slick.codegen.SourceCodeGenerator
 import slick.jdbc.JdbcProfile
 
 trait TableFileGenerator { self: SourceCodeGenerator =>
-  def writeTablesToFile(profile: String,
-                        folder: String,
-                        pkg: String,
-                        fileName: String): Unit
+  def writeTablesToFile(profile: String, folder: String, pkg: String, fileName: String): Unit
 }
 
 trait RowFileGenerator { self: SourceCodeGenerator =>
@@ -31,9 +28,7 @@ object Generator {
                                folder: String,
                                pkg: String,
                                fileName = s"${camelSchemaName}Tables.scala")
-    rowGen.writeRowsToFile(folder: String,
-                           pkg: String,
-                           fileName = s"${camelSchemaName}Rows.scala")
+    rowGen.writeRowsToFile(folder: String, pkg: String, fileName = s"${camelSchemaName}Rows.scala")
   }
 
   def run(uri: URI,
@@ -55,10 +50,8 @@ object Generator {
     def importStatements(imports: List[String]) = imports.map("import " + _).mkString("\n")
 
     try {
-      val dbModel: slick.model.Model = Await.result(
-        dc.db.run(
-          ModelTransformation.createModel(dc.profile, parsedSchemasOpt)),
-        Duration.Inf)
+      val dbModel: slick.model.Model =
+        Await.result(dc.db.run(ModelTransformation.createModel(dc.profile, parsedSchemasOpt)), Duration.Inf)
 
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
         case (schemaName, tables) =>
@@ -66,10 +59,9 @@ object Generator {
             s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
               .getFragment()}").driver"""
 
-          val schemaOnlyModel = Await.result(
-            dc.db.run(ModelTransformation
-              .createModel(dc.profile, Some(Map(schemaName -> tables)))),
-            Duration.Inf)
+          val schemaOnlyModel = Await.result(dc.db.run(ModelTransformation
+                                               .createModel(dc.profile, Some(Map(schemaName -> tables)))),
+                                             Duration.Inf)
 
           val rowGenerator = new RowSourceCodeGenerator(
             model = schemaOnlyModel,
@@ -83,16 +75,18 @@ object Generator {
           )
 
           val tableGenerator =
-            new TableSourceCodeGenerator(schemaOnlyModel = schemaOnlyModel,
-                                         headerComment = header,
-                                         imports = importStatements(tablesFileImports),
-                                         schemaName = schemaName,
-                                         fullDatabaseModel = dbModel,
-                                         pkg = pkg,
-                                         manualForeignKeys,
-                                         parentType = parentType,
-                                         idType,
-                                         typeReplacements)
+            new TableSourceCodeGenerator(
+              schemaOnlyModel = schemaOnlyModel,
+              headerComment = header,
+              imports = importStatements(tablesFileImports),
+              schemaName = schemaName,
+              fullDatabaseModel = dbModel,
+              pkg = pkg,
+              manualForeignKeys,
+              parentType = parentType,
+              idType,
+              typeReplacements
+            )
 
           outputSchemaCode(schemaName = schemaName,
                            profile = profile,

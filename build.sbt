@@ -26,3 +26,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick-codegen" % slickVersionValue,
   "com.typesafe.slick" %% "slick-hikaricp" % slickVersionValue
 )
+
+lintingSettings
+
+formatSettings
