@@ -1,10 +1,10 @@
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import slick.dbio.DBIO
-import slick.driver.JdbcProfile
+import slick.jdbc.JdbcProfile
 import slick.jdbc.meta.MTable
-import slick.profile.RelationalProfile.ColumnOption.Length
-import slick.profile.SqlProfile.ColumnOption.SqlType
+import slick.relational.RelationalProfile.ColumnOption.Length
+import slick.sql.SqlProfile.ColumnOption.SqlType
 import slick.{model => m}
 
 object ModelTransformation {
@@ -14,14 +14,13 @@ object ModelTransformation {
       table.copy(columns = table.columns.map(column =>
         if (column.options contains SqlType("citext")) {
           column.copy(options = column.options.filter {
-            case length: Length => false
-            case option => true
+            case _: Length => false
+            case _         => true
           })
         } else column))))
 
   def references(dbModel: m.Model,
-                 tcMappings: Map[(String, String), (String, String)])
-    : Map[(String, String), (m.Table, m.Column)] = {
+                 tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (m.Table, m.Column)] = {
     def getTableColumn(tc: (String, String)): (m.Table, m.Column) = {
       val (tableName, columnName) = tc
       val table = dbModel.tables
@@ -29,8 +28,7 @@ object ModelTransformation {
         .getOrElse(throw new RuntimeException("No table " + tableName))
       val column = table.columns
         .find(_.name == columnName)
-        .getOrElse(throw new RuntimeException(
-          "No column " + columnName + " in table " + tableName))
+        .getOrElse(throw new RuntimeException("No column " + columnName + " in table " + tableName))
       (table, column)
     }
 
@@ -39,16 +37,13 @@ object ModelTransformation {
     }
   }
 
-  def parseSchemaList(
-      schemaTableNames: List[String]): Map[String, List[String]] =
+  def parseSchemaList(schemaTableNames: List[String]): Map[String, List[String]] =
     schemaTableNames
       .map(_.split('.'))
       .groupBy(_.head)
       .mapValues(_.flatMap(_.tail))
 
-  def createModel(
-      jdbcProfile: JdbcProfile,
-      mappedSchemasOpt: Option[Map[String, List[String]]]): DBIO[m.Model] = {
+  def createModel(jdbcProfile: JdbcProfile, mappedSchemasOpt: Option[Map[String, List[String]]]): DBIO[m.Model] = {
     import slick.jdbc.meta.MQName
 
     val filteredTables = mappedSchemasOpt.map { mappedSchemas =>
@@ -61,7 +56,7 @@ object ModelTransformation {
                   .find(table =>
                     table.name match {
                       case MQName(_, Some(`schemaName`), `tableName`) => true
-                      case _ => false
+                      case _                                          => false
                   })
                   .getOrElse(throw new IllegalArgumentException(
                     s"$schemaName.$tableName does not exist in the connected database.")))

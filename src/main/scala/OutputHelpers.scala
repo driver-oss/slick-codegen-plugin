@@ -1,7 +1,6 @@
 import slick.codegen.{SourceCodeGenerator, OutputHelpers}
 
-trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
-  self: SourceCodeGenerator =>
+trait TableOutputHelpers extends TableFileGenerator with OutputHelpers { self: SourceCodeGenerator =>
 
   def headerComment: String
   def schemaName: String
@@ -19,8 +18,7 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
         |$imports
         |
         |/** Stand-alone Slick data model for immediate use */
-        |// TODO: change this to `object tables`
-        |object `package` extends {
+        |object tables extends {
         |  val profile = $profile
         |} with Tables
         |
@@ -31,30 +29,21 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers {
         |}
         |""".stripMargin.trim()
 
-  def writeTablesToFile(profile: String,
-                        folder: String,
-                        pkg: String,
-                        fileName: String): Unit = {
-    writeStringToFile(
-      content =
-        packageTableCode(headerComment, pkg, schemaName, imports, profile),
-      folder = folder,
-      pkg = s"$pkg.$schemaName",
-      fileName = fileName)
+  def writeTablesToFile(profile: String, folder: String, pkg: String, fileName: String): Unit = {
+    writeStringToFile(content = packageTableCode(headerComment, pkg, schemaName, imports, profile),
+                      folder = folder,
+                      pkg = s"$pkg.$schemaName",
+                      fileName = fileName)
   }
 }
 
-trait RowOutputHelpers extends RowFileGenerator with OutputHelpers {
-  self: SourceCodeGenerator =>
+trait RowOutputHelpers extends RowFileGenerator with OutputHelpers { self: SourceCodeGenerator =>
 
   def headerComment: String
   def schemaName: String
   def imports: String
 
-  def packageRowCode(headerComment: String,
-                     schemaName: String,
-                     pkg: String,
-                     imports: String): String =
+  def packageRowCode(headerComment: String, schemaName: String, pkg: String, imports: String): String =
     s"""|${headerComment.trim().lines.map("// " + _).mkString("\n")}
         |/** Definitions for table rows types of database schema $schemaName */
         |package $pkg
@@ -67,10 +56,9 @@ trait RowOutputHelpers extends RowFileGenerator with OutputHelpers {
 
   def writeRowsToFile(folder: String, pkg: String, fileName: String): Unit = {
 
-    writeStringToFile(
-      content = packageRowCode(headerComment, schemaName, pkg, imports),
-      folder = folder,
-      pkg = s"$pkg.$schemaName",
-      fileName = fileName)
+    writeStringToFile(content = packageRowCode(headerComment, schemaName, pkg, imports),
+                      folder = folder,
+                      pkg = s"$pkg.$schemaName",
+                      fileName = fileName)
   }
 }

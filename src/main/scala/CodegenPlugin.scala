@@ -1,6 +1,4 @@
 import sbt._
-import sbt.Keys._
-import complete.DefaultParsers._
 
 object CodegenPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
@@ -20,20 +18,19 @@ object CodegenPlugin extends AutoPlugin {
       * @param foreignKeys foreign key references to data models add manually
       */
     case class CodegenDatabase(
-        databaseURI: String,
-        outputPackage: String,
-        outputPath: String,
-        schemaWhitelist: List[String] = List.empty,
-        foreignKeys: Map[TableColumn, TableColumn] = Map.empty
+            databaseURI: String,
+            outputPackage: String,
+            outputPath: String,
+            schemaWhitelist: List[String] = List.empty,
+            foreignKeys: Map[TableColumn, TableColumn] = Map.empty
     )
 
     lazy val codegenDatabaseConfigs = SettingKey[List[CodegenDatabase]](
       "codegen-database-configs",
       "configurations for each database and its generated code")
 
-    lazy val codegenSchemaBaseClassParts = SettingKey[List[String]](
-      "codegen-schema-base-class-parts",
-      "parts inherited by each generated schema object")
+    lazy val codegenSchemaBaseClassParts =
+      SettingKey[List[String]]("codegen-schema-base-class-parts", "parts inherited by each generated schema object")
     lazy val codegenIdType = SettingKey[Option[String]](
       "codegen-id-type",
       "The in-scope type `T` of kind `T[TableRow]` to apply in place T for id columns"
@@ -78,10 +75,11 @@ object CodegenPlugin extends AutoPlugin {
               config.outputPath,
               config.foreignKeys, {
                 val parts =
-                  (if (codegenIdType.value.isEmpty)
+                  (if (codegenIdType.value.isEmpty) {
                      codegenSchemaBaseClassParts.value :+ "DefaultIdTypeMapper"
-                   else
-                     codegenSchemaBaseClassParts.value)
+                   } else {
+                     codegenSchemaBaseClassParts.value
+                   })
 
                 Some(parts).filter(_.nonEmpty).map(_.mkString(" with "))
               },

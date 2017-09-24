@@ -15,20 +15,18 @@ credentials += Credentials("Artifactory Realm",
                            "sbt-publisher",
                            "***REMOVED***")
 
-val scalaVersionValue = "2.10.6"
+val scalaVersionValue = "2.12.3"
 
 scalaVersion := scalaVersionValue
 
-// The following don't work with scala 2.10
-scalacOptions := scalacOptions.value.filterNot(Seq(
-  "-Xlint:-missing-interpolator",
-  "-Ywarn-unused",
-  "-Ywarn-unused-import").contains)
-
-val slickVersionValue = "3.1.1"
+val slickVersionValue = "3.2.1"
 
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick" % slickVersionValue,
   "com.typesafe.slick" %% "slick-codegen" % slickVersionValue,
   "com.typesafe.slick" %% "slick-hikaricp" % slickVersionValue
 )
+
+lintingSettings
+
+formatSettings
