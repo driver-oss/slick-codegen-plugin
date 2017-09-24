@@ -53,7 +53,7 @@ class TableSourceCodeGenerator(schemaOnlyModel: m.Model,
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
        |trait DefaultIdTypeMapper {
-       |  val profile: slick.driver.JdbcProfile
+       |  val profile: slick.jdbc.JdbcProfile
        |  import profile.api._
        |  implicit def idTypeMapper[A]: BaseColumnType[Id[A]] = MappedColumnType.base[Id[A], Int](_.v, Id(_))
        |}

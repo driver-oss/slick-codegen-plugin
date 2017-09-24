@@ -18,8 +18,7 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers { self: S
         |$imports
         |
         |/** Stand-alone Slick data model for immediate use */
-        |// TODO: change this to `object tables`
-        |object `package` extends {
+        |object tables extends {
         |  val profile = $profile
         |} with Tables
         |

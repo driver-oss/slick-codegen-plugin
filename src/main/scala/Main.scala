@@ -56,8 +56,8 @@ object Generator {
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
         case (schemaName, tables) =>
           val profile =
-            s"""slick.backend.DatabaseConfig.forConfig[slick.driver.JdbcProfile]("${uri
-              .getFragment()}").driver"""
+            s"""slick.basic.DatabaseConfig.forConfig[slick.jdbc.JdbcProfile]("${uri
+              .getFragment()}").profile"""
 
           val schemaOnlyModel = Await.result(dc.db.run(ModelTransformation
                                                .createModel(dc.profile, Some(Map(schemaName -> tables)))),
