@@ -7,7 +7,7 @@ import slick.codegen.SourceCodeGenerator
 import slick.jdbc.JdbcProfile
 
 trait TableFileGenerator { self: SourceCodeGenerator =>
-  def writeTablesToFile(profile: String, folder: String, pkg: String, fileName: String): Unit
+  def writeTablesToFile(folder: String, pkg: String, fileName: String): Unit
 }
 
 trait RowFileGenerator { self: SourceCodeGenerator =>
@@ -17,17 +17,13 @@ trait RowFileGenerator { self: SourceCodeGenerator =>
 object Generator {
 
   private def outputSchemaCode(schemaName: String,
-                               profile: String,
                                folder: String,
                                pkg: String,
                                tableGen: TableFileGenerator,
                                rowGen: RowFileGenerator): Unit = {
     val camelSchemaName = schemaName.split('_').map(_.capitalize).mkString("")
 
-    tableGen.writeTablesToFile(profile: String,
-                               folder: String,
-                               pkg: String,
-                               fileName = s"${camelSchemaName}Tables.scala")
+    tableGen.writeTablesToFile(folder: String, pkg: String, fileName = s"${camelSchemaName}Tables.scala")
     rowGen.writeRowsToFile(folder: String, pkg: String, fileName = s"${camelSchemaName}Rows.scala")
   }
 
@@ -55,10 +51,6 @@ object Generator {
 
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
         case (schemaName, tables) =>
-          val profile =
-            s"""slick.basic.DatabaseConfig.forConfig[slick.jdbc.JdbcProfile]("${uri
-              .getFragment()}").profile"""
-
           val schemaOnlyModel = Await.result(dc.db.run(ModelTransformation
                                                .createModel(dc.profile, Some(Map(schemaName -> tables)))),
                                              Duration.Inf)
@@ -89,7 +81,6 @@ object Generator {
             )
 
           outputSchemaCode(schemaName = schemaName,
-                           profile = profile,
                            folder = outputPath,
                            pkg = pkg,
                            tableGen = tableGenerator,
