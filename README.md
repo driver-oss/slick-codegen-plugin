@@ -11,13 +11,15 @@ Extends/customizes the
 resolvers += "releases" at "https://drivergrp.jfrog.io/drivergrp/releases"
 credentials += Credentials("Artifactory Realm", "drivergrp.jfrog.io", "sbt-publisher", "***REMOVED***")
 
-addSbtPlugin("xyz.driver" % "sbt-slick-codegen" % "0.8")
+addSbtPlugin("xyz.driver" % "sbt-slick-codegen" % "0.10.2")
 
 // Replace with the appropriate jdbc driver for your database:
 libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1104-jdbc41"
 ```
 
-Note that the jdbc-driver needs to be added separately to `plugins.sbt` and `build.sbt` as a dependency for the project and codegen, respectively.
+The jdbc-driver needs to be added separately to `plugins.sbt` and `build.sbt` as a dependency for the project and codegen, respectively.
+
+Version 0.10.x requires sbt 1.0. For sbt 0.13, use 0.9.8
 
 (also note that postgres jdbc driver `9.4.x` will not expose columns in certain metadata "tables", causing generated code not to compile)
 
