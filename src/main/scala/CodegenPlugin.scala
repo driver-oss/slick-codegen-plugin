@@ -62,6 +62,7 @@ object CodegenPlugin extends AutoPlugin {
     codegenSchemaBaseClassParts := List.empty,
     codegenIdType := Option.empty,
     codegenSchemaImports := List.empty,
+    codegenSchemaRowImports := Option.empty,
     codegenTypeReplacements := Map.empty,
     codegenHeader := "AUTO-GENERATED Slick data model",
     slickCodeGenTask := Def.taskDyn {
