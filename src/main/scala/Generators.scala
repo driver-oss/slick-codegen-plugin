@@ -65,19 +65,23 @@ class TableSourceCodeGenerator(schemaOnlyModel: m.Model,
     // TODO: fix upstream
     val tableCode = super.code.lines.drop(1).mkString("\n")
 
-    val tripleQuote = "\"\"\""
-    val namespaceDDL =
-      s"""|val createNamespaceSchema = {
-       |  implicit val GRUnit = slick.jdbc.GetResult(_ => ())
-       |  sql${tripleQuote}CREATE SCHEMA IF NOT EXISTS "$schemaName";${tripleQuote}.as[Unit]
-       |}
-       |
-       |val dropNamespaceSchema = {
-       |  implicit val GRUnit = slick.jdbc.GetResult(_ => ())
-       |  sql${tripleQuote}DROP SCHEMA "$schemaName" CASCADE;${tripleQuote}.as[Unit]
-       |} """
-
-    tableCode + "\n\n" + namespaceDDL
+    if (ddlEnabled && schemaName != "public") { // TODO: "public" is postgres-specific
+      // TODO: make generated DDL overrideable upstream
+      try {
+        val (before, ddl +: after) = tableCode.lines.toVector.span(! _.contains("val schema"))
+        val Array(identifier, tablesDDL) = ddl.split('=').map(_.trim)
+        val schemaDDL: Vector[String] =
+          s"""|lazy val schema: profile.SchemaDescription = {
+              |  val schemaDDL = profile.DDL(
+              |    create1 = "create schema " + profile.quoteIdentifier("$schemaName"),
+              |    drop2 = "drop schema " + profile.quoteIdentifier("$schemaName"))
+              |  schemaDDL ++ ${tablesDDL.trim}
+              |}""".stripMargin.lines.toVector
+            (before ++ schemaDDL ++ after).mkString("\n")
+      } catch {
+        case _: MatchError => throw new Exception("failed to modify schemaddl line")
+      }
+    } else tableCode
   }
 
   override def Table = new this.TypedIdTable(_) { table =>
