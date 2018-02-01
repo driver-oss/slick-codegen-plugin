@@ -19,8 +19,9 @@ object ModelTransformation {
           })
         } else column))))
 
-  def references(dbModel: m.Model,
-                 tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (m.Table, m.Column)] = {
+  def references(
+      dbModel: m.Model,
+      tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (m.Table, m.Column)] = {
     def getTableColumn(tc: (String, String)): (m.Table, m.Column) = {
       val (tableName, columnName) = tc
       val table = dbModel.tables

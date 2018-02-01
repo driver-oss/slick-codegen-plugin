@@ -2,10 +2,10 @@ import slick.codegen.SourceCodeGenerator
 import slick.{model => m}
 
 class TypedIdSourceCodeGenerator(
-        singleSchemaModel: m.Model,
-        databaseModel: m.Model,
-        idType: Option[String],
-        manualForeignKeys: Map[(String, String), (String, String)]
+    singleSchemaModel: m.Model,
+    databaseModel: m.Model,
+    idType: Option[String],
+    manualForeignKeys: Map[(String, String), (String, String)]
 ) extends SourceCodeGenerator(singleSchemaModel) {
   val manualReferences =
     ModelTransformation.references(databaseModel, manualForeignKeys)

@@ -16,28 +16,30 @@ trait RowFileGenerator { self: SourceCodeGenerator =>
 
 object Generator {
 
-  private def outputSchemaCode(schemaName: String,
-                               folder: String,
-                               pkg: String,
-                               tableGen: TableFileGenerator,
-                               rowGen: RowFileGenerator): Unit = {
+  private def outputSchemaCode(
+      schemaName: String,
+      folder: String,
+      pkg: String,
+      tableGen: TableFileGenerator,
+      rowGen: RowFileGenerator): Unit = {
     val camelSchemaName = schemaName.split('_').map(_.capitalize).mkString("")
 
     tableGen.writeTablesToFile(folder: String, pkg: String, fileName = s"${camelSchemaName}Tables.scala")
     rowGen.writeRowsToFile(folder: String, pkg: String, fileName = s"${camelSchemaName}Rows.scala")
   }
 
-  def run(uri: URI,
-          pkg: String,
-          schemaNames: Option[List[String]],
-          outputPath: String,
-          manualForeignKeys: Map[(String, String), (String, String)],
-          parentType: Option[String],
-          idType: Option[String],
-          header: String,
-          tablesFileImports: List[String],
-          rowsFileImports: List[String],
-          typeReplacements: Map[String, String]) = {
+  def run(
+      uri: URI,
+      pkg: String,
+      schemaNames: Option[List[String]],
+      outputPath: String,
+      manualForeignKeys: Map[(String, String), (String, String)],
+      parentType: Option[String],
+      idType: Option[String],
+      header: String,
+      tablesFileImports: List[String],
+      rowsFileImports: List[String],
+      typeReplacements: Map[String, String]) = {
     val dc: DatabaseConfig[JdbcProfile] =
       DatabaseConfig.forURI[JdbcProfile](uri)
     val parsedSchemasOpt: Option[Map[String, List[String]]] =
@@ -51,9 +53,10 @@ object Generator {
 
       parsedSchemasOpt.getOrElse(Map.empty).foreach {
         case (schemaName, tables) =>
-          val schemaOnlyModel = Await.result(dc.db.run(ModelTransformation
-                                               .createModel(dc.profile, Some(Map(schemaName -> tables)))),
-                                             Duration.Inf)
+          val schemaOnlyModel = Await.result(
+            dc.db.run(ModelTransformation
+              .createModel(dc.profile, Some(Map(schemaName -> tables)))),
+            Duration.Inf)
 
           val rowGenerator = new RowSourceCodeGenerator(
             model = schemaOnlyModel,
@@ -80,11 +83,12 @@ object Generator {
               typeReplacements
             )
 
-          outputSchemaCode(schemaName = schemaName,
-                           folder = outputPath,
-                           pkg = pkg,
-                           tableGen = tableGenerator,
-                           rowGen = rowGenerator)
+          outputSchemaCode(
+            schemaName = schemaName,
+            folder = outputPath,
+            pkg = pkg,
+            tableGen = tableGenerator,
+            rowGen = rowGenerator)
       }
     } finally {
       dc.db.close()

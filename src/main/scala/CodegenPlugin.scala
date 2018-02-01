@@ -18,11 +18,11 @@ object CodegenPlugin extends AutoPlugin {
       * @param foreignKeys foreign key references to data models add manually
       */
     case class CodegenDatabase(
-            databaseURI: String,
-            outputPackage: String,
-            outputPath: String,
-            schemaWhitelist: List[String] = List.empty,
-            foreignKeys: Map[TableColumn, TableColumn] = Map.empty
+        databaseURI: String,
+        outputPackage: String,
+        outputPath: String,
+        schemaWhitelist: List[String] = List.empty,
+        foreignKeys: Map[TableColumn, TableColumn] = Map.empty
     )
 
     lazy val codegenDatabaseConfigs = SettingKey[List[CodegenDatabase]](

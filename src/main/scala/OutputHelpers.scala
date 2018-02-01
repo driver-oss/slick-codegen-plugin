@@ -21,10 +21,11 @@ trait TableOutputHelpers extends TableFileGenerator with OutputHelpers { self: S
         |""".stripMargin.trim()
 
   def writeTablesToFile(folder: String, pkg: String, fileName: String): Unit = {
-    writeStringToFile(content = packageTableCode(headerComment, pkg, schemaName, imports),
-                      folder = folder,
-                      pkg = s"$pkg.$schemaName",
-                      fileName = fileName)
+    writeStringToFile(
+      content = packageTableCode(headerComment, pkg, schemaName, imports),
+      folder = folder,
+      pkg = s"$pkg.$schemaName",
+      fileName = fileName)
   }
 }
 
@@ -47,9 +48,10 @@ trait RowOutputHelpers extends RowFileGenerator with OutputHelpers { self: Sourc
 
   def writeRowsToFile(folder: String, pkg: String, fileName: String): Unit = {
 
-    writeStringToFile(content = packageRowCode(headerComment, schemaName, pkg, imports),
-                      folder = folder,
-                      pkg = s"$pkg.$schemaName",
-                      fileName = fileName)
+    writeStringToFile(
+      content = packageRowCode(headerComment, schemaName, pkg, imports),
+      folder = folder,
+      pkg = s"$pkg.$schemaName",
+      fileName = fileName)
   }
 }
