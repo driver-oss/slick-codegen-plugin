@@ -9,15 +9,22 @@ import slick.{model => m}
 
 object ModelTransformation {
 
+  def citextColumnNoLength(column: m.Column): m.Column =
+    if (column.options contains SqlType("citext")) {
+      column.copy(options = column.options.filter {
+        case _: Length => false
+        case _         => true
+      })
+    } else column
+
   def citextNoLength(dbModel: m.Model): m.Model =
-    dbModel.copy(tables = dbModel.tables.map(table =>
-      table.copy(columns = table.columns.map(column =>
-        if (column.options contains SqlType("citext")) {
-          column.copy(options = column.options.filter {
-            case _: Length => false
-            case _         => true
-          })
-        } else column))))
+    dbModel.copy(
+      tables = dbModel.tables.map(
+        table =>
+          table.copy(
+            columns = table.columns.map(citextColumnNoLength),
+            indices = table.indices.map(index => index.copy(columns = index.columns.map(citextColumnNoLength)))
+        )))
 
   def references(
       dbModel: m.Model,
