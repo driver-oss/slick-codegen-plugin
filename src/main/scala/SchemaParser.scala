@@ -19,12 +19,18 @@ object ModelTransformation {
 
   def citextNoLength(dbModel: m.Model): m.Model =
     dbModel.copy(
-      tables = dbModel.tables.map(
-        table =>
-          table.copy(
-            columns = table.columns.map(citextColumnNoLength),
-            indices = table.indices.map(index => index.copy(columns = index.columns.map(citextColumnNoLength)))
-        )))
+      tables = dbModel.tables.map(table =>
+        table.copy(
+          primaryKey = table.primaryKey.map(pk => pk.copy(columns = pk.columns.map(citextColumnNoLength))),
+          columns = table.columns.map(citextColumnNoLength),
+          indices = table.indices.map(index => index.copy(columns = index.columns.map(citextColumnNoLength))),
+          foreignKeys = table.foreignKeys.map { fk =>
+            fk.copy(
+              referencedColumns = fk.referencedColumns.map(citextColumnNoLength),
+              referencingColumns = fk.referencingColumns.map(citextColumnNoLength)
+            )
+          }
+      )))
 
   def references(
       dbModel: m.Model,
