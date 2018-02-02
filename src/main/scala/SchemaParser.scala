@@ -9,18 +9,32 @@ import slick.{model => m}
 
 object ModelTransformation {
 
-  def citextNoLength(dbModel: m.Model): m.Model =
-    dbModel.copy(tables = dbModel.tables.map(table =>
-      table.copy(columns = table.columns.map(column =>
-        if (column.options contains SqlType("citext")) {
-          column.copy(options = column.options.filter {
-            case _: Length => false
-            case _         => true
-          })
-        } else column))))
+  def citextColumnNoLength(column: m.Column): m.Column =
+    if (column.options contains SqlType("citext")) {
+      column.copy(options = column.options.filter {
+        case _: Length => false
+        case _         => true
+      })
+    } else column
 
-  def references(dbModel: m.Model,
-                 tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (m.Table, m.Column)] = {
+  def citextNoLength(dbModel: m.Model): m.Model =
+    dbModel.copy(
+      tables = dbModel.tables.map(table =>
+        table.copy(
+          primaryKey = table.primaryKey.map(pk => pk.copy(columns = pk.columns.map(citextColumnNoLength))),
+          columns = table.columns.map(citextColumnNoLength),
+          indices = table.indices.map(index => index.copy(columns = index.columns.map(citextColumnNoLength))),
+          foreignKeys = table.foreignKeys.map { fk =>
+            fk.copy(
+              referencedColumns = fk.referencedColumns.map(citextColumnNoLength),
+              referencingColumns = fk.referencingColumns.map(citextColumnNoLength)
+            )
+          }
+      )))
+
+  def references(
+      dbModel: m.Model,
+      tcMappings: Map[(String, String), (String, String)]): Map[(String, String), (m.Table, m.Column)] = {
     def getTableColumn(tc: (String, String)): (m.Table, m.Column) = {
       val (tableName, columnName) = tc
       val table = dbModel.tables

@@ -1,14 +1,14 @@
 import slick.{model => m}
 
 class RowSourceCodeGenerator(
-        model: m.Model,
-        override val headerComment: String,
-        override val imports: String,
-        override val schemaName: String,
-        fullDatabaseModel: m.Model,
-        idType: Option[String],
-        manualForeignKeys: Map[(String, String), (String, String)],
-        typeReplacements: Map[String, String]
+    model: m.Model,
+    override val headerComment: String,
+    override val imports: String,
+    override val schemaName: String,
+    fullDatabaseModel: m.Model,
+    idType: Option[String],
+    manualForeignKeys: Map[(String, String), (String, String)],
+    typeReplacements: Map[String, String]
 ) extends TypedIdSourceCodeGenerator(
       singleSchemaModel = model,
       databaseModel = fullDatabaseModel,
@@ -35,20 +35,22 @@ class RowSourceCodeGenerator(
   override def code = tables.map(_.code.mkString("\n")).mkString("\n\n")
 }
 
-class TableSourceCodeGenerator(schemaOnlyModel: m.Model,
-                               override val headerComment: String,
-                               override val imports: String,
-                               override val schemaName: String,
-                               fullDatabaseModel: m.Model,
-                               pkg: String,
-                               manualForeignKeys: Map[(String, String), (String, String)],
-                               override val parentType: Option[String],
-                               idType: Option[String],
-                               typeReplacements: Map[String, String])
-    extends TypedIdSourceCodeGenerator(singleSchemaModel = schemaOnlyModel,
-                                       databaseModel = fullDatabaseModel,
-                                       idType,
-                                       manualForeignKeys) with TableOutputHelpers {
+class TableSourceCodeGenerator(
+    schemaOnlyModel: m.Model,
+    override val headerComment: String,
+    override val imports: String,
+    override val schemaName: String,
+    fullDatabaseModel: m.Model,
+    pkg: String,
+    manualForeignKeys: Map[(String, String), (String, String)],
+    override val parentType: Option[String],
+    idType: Option[String],
+    typeReplacements: Map[String, String])
+    extends TypedIdSourceCodeGenerator(
+      singleSchemaModel = schemaOnlyModel,
+      databaseModel = fullDatabaseModel,
+      idType,
+      manualForeignKeys) with TableOutputHelpers {
 
   val defaultIdImplementation =
     """|final case class Id[T](v: Int)
@@ -68,8 +70,8 @@ class TableSourceCodeGenerator(schemaOnlyModel: m.Model,
     if (ddlEnabled && schemaName != "public") { // TODO: "public" is postgres-specific
       // TODO: make generated DDL overrideable upstream
       try {
-        val (before, ddl +: after) = tableCode.lines.toVector.span(! _.contains("val schema"))
-        val Array(identifier, tablesDDL) = ddl.split('=').map(_.trim)
+        val (before, ddl +: after) = tableCode.lines.toVector.span(!_.contains("val schema"))
+        val Array(_, tablesDDL)    = ddl.split('=').map(_.trim)
         val schemaDDL: Vector[String] =
           s"""|lazy val schema: profile.SchemaDescription = {
               |  val schemaDDL = profile.DDL(
@@ -77,7 +79,7 @@ class TableSourceCodeGenerator(schemaOnlyModel: m.Model,
               |    drop2 = "drop schema " + profile.quoteIdentifier("$schemaName"))
               |  schemaDDL ++ ${tablesDDL.trim}
               |}""".stripMargin.lines.toVector
-            (before ++ schemaDDL ++ after).mkString("\n")
+        (before ++ schemaDDL ++ after).mkString("\n")
       } catch {
         case _: MatchError => throw new Exception("failed to modify schemaddl line")
       }
