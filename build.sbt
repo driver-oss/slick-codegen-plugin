@@ -10,11 +10,6 @@ publishTo := {
   else Some("releases" at jfrog + "releases")
 }
 
-credentials += Credentials("Artifactory Realm",
-                           "drivergrp.jfrog.io",
-                           "sbt-publisher",
-                           "***REMOVED***")
-
 val scalaVersionValue = "2.12.3"
 
 scalaVersion := scalaVersionValue
