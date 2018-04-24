@@ -8,9 +8,6 @@ Extends/customizes the
 ### project/plugins.sbt
 
 ```sbt
-resolvers += "releases" at "https://drivergrp.jfrog.io/drivergrp/releases"
-credentials += Credentials("Artifactory Realm", "drivergrp.jfrog.io", "sbt-publisher", "***REMOVED***")
-
 addSbtPlugin("xyz.driver" % "sbt-slick-codegen" % "0.10.2")
 
 // Replace with the appropriate jdbc driver for your database:
